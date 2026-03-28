@@ -64,6 +64,13 @@ uniform mat4 gbufferProjection;
 uniform mat4 gbufferModelView;
 #endif
 
+#if defined(HDR_MOD_INSTALLED) && defined(HDR_ENABLED)
+    uniform float HdrGamePeakBrightness;
+    uniform float HdrGamePaperWhiteBrightness;
+    uniform float HdrGameMinimumBrightness;
+    uniform float HdrUIBrightness;
+#endif
+
 // Pipeline Options //
 const bool colortex0MipmapEnabled = true;
 const bool colortex1MipmapEnabled = true;
@@ -139,11 +146,16 @@ void main() {
 	#endif
 
 	//Tonemap & Film Grain
-	color = Uncharted2Tonemap(color * TONEMAP_BRIGHTNESS) / Uncharted2Tonemap(vec3(TONEMAP_WHITE_THRESHOLD));
-	color = pow(color, vec3(1.0 / 2.2));
-	colorSaturation(color);
-	color += (Bayer8(gl_FragCoord.xy) - 0.25) / 128.0;
-
+	color = TONEMAP(color * TONEMAP_BRIGHTNESS) / Uncharted2Tonemap(vec3(TONEMAP_WHITE_THRESHOLD));
+	
+	#ifdef HDR_ENABLED
+		color *= HdrGamePaperWhiteBrightness / HdrUIBrightness;
+		color = linearToSRGBSafe(color);
+	#else
+		color = pow(color, vec3(1.0 / 2.2));
+		colorSaturation(color);
+		color += (Bayer8(gl_FragCoord.xy) - 0.25) / 128.0;
+	#endif
 	//Lens Flare
 	#ifdef LENS_FLARE
 	vec2 lightPos = getLightPos();
