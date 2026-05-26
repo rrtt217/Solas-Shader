@@ -64,7 +64,7 @@ uniform mat4 gbufferProjection;
 uniform mat4 gbufferModelView;
 #endif
 
-#if defined(HDR_MOD_INSTALLED) && defined(HDR_ENABLED)
+#if defined HDR_MOD_INSTALLED && defined HDR_ENABLED
     uniform float HdrGamePeakBrightness;
     uniform float HdrGamePaperWhiteBrightness;
     uniform float HdrGameMinimumBrightness;
@@ -146,11 +146,15 @@ void main() {
 	#endif
 
 	//Tonemap & Film Grain
-	color = TONEMAP(color * TONEMAP_BRIGHTNESS) / Uncharted2Tonemap(vec3(TONEMAP_WHITE_THRESHOLD));
-	
+	#ifdef HDR_ENABLED
+		color = TONEMAP(color * TONEMAP_BRIGHTNESS);
+	#else
+		color = TONEMAP(color * TONEMAP_BRIGHTNESS) / Uncharted2OriginalTonemap(vec3(TONEMAP_WHITE_THRESHOLD));
+	#endif
 	#ifdef HDR_ENABLED
 		color *= HdrGamePaperWhiteBrightness / HdrUIBrightness;
 		color = linearToSRGBSafe(color);
+		colorSaturation(color);
 	#else
 		color = pow(color, vec3(1.0 / 2.2));
 		colorSaturation(color);
@@ -158,6 +162,9 @@ void main() {
 	#endif
 	//Lens Flare
 	#ifdef LENS_FLARE
+	#ifdef HDR_ENABLED
+		color = reinhard(color);
+	#endif
 	vec2 lightPos = getLightPos();
 	float truePos = sign(sunVec.z);
 	      
@@ -175,6 +182,10 @@ void main() {
 	#endif
 
 	if (multiplier > 0.001) LensFlare(color, lightPos, truePos, multiplier);
+
+	#ifdef HDR_ENABLED
+		color = invReinhard(color);
+	#endif
 
 	if (texCoord.x > 2.0 * pixelWidth && texCoord.x < 4.0 * pixelWidth && texCoord.y < 2.0 * pixelHeight)
 		temporalData = mix(tempVisibleSun, visibleSun, 0.125);
