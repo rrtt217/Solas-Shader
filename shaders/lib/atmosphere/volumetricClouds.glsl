@@ -153,11 +153,10 @@ void computeVolumetricClouds(inout vec4 vc, in vec3 atmosphereColor, float z, fl
         #ifdef AURORA_LIGHTING_INFLUENCE
         //The index of geomagnetic activity. Determines the brightness of Aurora, its widespreadness across the sky and tilt factor
         float kpIndex = abs(worldDay % 9 - worldDay % 4);
-                kpIndex = kpIndex - int(kpIndex == 1) + int(kpIndex > 7 && worldDay % 10 == 0);
-                kpIndex = min(max(kpIndex, 0) + isSnowy * 4, 9);
-
+              kpIndex = kpIndex - int(kpIndex == 1) + int(kpIndex > 7 && worldDay % 10 == 0);
+              kpIndex = min(max(kpIndex, 0) + isSnowy * 4, 9);
         #ifdef AURORA_ALWAYS_VISIBLE
-                kpIndex = 9;
+              kpIndex = 9;
         #endif
 
         //Total visibility of aurora based on multiple factors
@@ -165,21 +164,30 @@ void computeVolumetricClouds(inout vec4 vc, in vec3 atmosphereColor, float z, fl
 
         //Aurora tends to get brighter and dimmer when plasma arrives or fades away
         float pulse = 0.5 + 0.5 * sin(frameTimeCounter * 0.08 + sin(frameTimeCounter * 0.013) * 0.6);
-                pulse = smoothstep(0.15, 0.85, pulse);
+              pulse = smoothstep(0.15, 0.85, pulse);
 
         float longPulse = sin(frameTimeCounter * 0.025 + sin(frameTimeCounter * 0.004) * 0.8);
-                longPulse = longPulse * (1.0 - 0.15 * abs(longPulse));
+              longPulse = longPulse * (1.0 - 0.15 * abs(longPulse));
 
         kpIndex *= 1.0 + longPulse * 0.25;
         kpIndex /= 9.0;
+
+		//When aurora turns red
+		float redPhase = pow3(kpIndex) * (1.0 - pulse);
+
+        //Aurora distribution parameters
+        float westEast = clamp(1.0 - abs(nWorldPos.x * 0.05) + kpIndex * kpIndex, 0.0, 1.0); //Fade out aurora closer to the western/eastern horizons
+        float north = clamp(10.0 * kpIndex * kpIndex * kpIndex - nWorldPos.z, 0.0, 1.0); //Make aurora appear stronger in north when looking from the ground
+        float auroraDistanceFactor = clamp(1.0 - length(nWorldPos.xz) * 0.02, 0.0, 1.0); //Limit the max render distance
+
         auroraVisibility *= kpIndex * (1.0 + max(longPulse * 0.5, 0.0));
-        auroraVisibility = min(auroraVisibility, 2.0) * AURORA_BRIGHTNESS;
+        auroraVisibility = min(auroraVisibility, 2.0) * AURORA_BRIGHTNESS * 10;
+        auroraVisibility *= auroraDistanceFactor * auroraDistanceFactor * north * westEast;
 
-        float WEhorizon = clamp(pow(1.0 - abs(nWorldPos.x * 0.1), 4.0), 0.0, 1.0);
-        float auroraNorthBias = clamp((-nWorldPos.x * 0.5 - nWorldPos.z) * 0.25 + pow4(kpIndex) * 2.0, 0.0, 1.0);
-        float auroraDistanceFactor = clamp(1.0 - length(nWorldPos.xz) * 0.05, 0.0, 1.0) * auroraNorthBias * WEhorizon;
-
-        auroraVisibility *= auroraDistanceFactor * auroraDistanceFactor;
+        float colorMixer = 0.65 + pow3(kpIndex) * pulse * 0.1;
+        vec3 lowColor = vec3(0.45, 1.55 - redPhase * 0.5, 0.0);
+        vec3 upColor = vec3(0.95 + redPhase * 5.0, 0.10, 0.0);
+        vec3 auroraColor = fmix(lowColor, upColor, colorMixer);
         #endif
 
 		//Ray marcher peramters
@@ -200,10 +208,10 @@ void computeVolumetricClouds(inout vec4 vc, in vec3 atmosphereColor, float z, fl
             float planeDifference = farthestPlane - nearestPlane;
 
             float lengthScaling = abs(cameraPosition.y - (cloudTop + cloudBottom) * 0.5) / ((cloudTop - cloudBottom) * 0.5);
-                    lengthScaling = clamp((lengthScaling - 1.0) * thickness * 0.125, 0.0, 1.0);
+                  lengthScaling = clamp((lengthScaling - 1.0) * thickness * 0.125, 0.0, 1.0);
 
             float rayLength = thickness * scale / 2.0;
-                    rayLength /= (4.0 * nWorldPos.y * nWorldPos.y) * lengthScaling + 1.0;
+                  rayLength /= (4.0 * nWorldPos.y * nWorldPos.y) * lengthScaling + 1.0;
 
             vec3 rayIncrement = nWorldPos * rayLength;
             int sampleCount = int(min(planeDifference / rayLength, maxsampleCount) + 4);
@@ -239,7 +247,7 @@ void computeVolumetricClouds(inout vec4 vc, in vec3 atmosphereColor, float z, fl
             float xzNormalizeFactor = 10.0 / max(abs(height - 72.0), 56.0);
 
 			vec3 worldLightVec = normalize(ToWorld(lightVec * 100000000.0));
-                    worldLightVec *= 2.5 * shadowFade;
+                 worldLightVec *= 2.5 * shadowFade;
 
             for (int i = 0; i < sampleCount; i++, rayPos += rayIncrement, sampleTotalLength += rayLength) {
                 if (cloud > 0.99 || (lViewPos < sampleTotalLength && z < 1.0) || sampleTotalLength > distance * 32.0) break;
@@ -268,7 +276,7 @@ void computeVolumetricClouds(inout vec4 vc, in vec3 atmosphereColor, float z, fl
                       noise *= attenuation;
 
                 float lightingNoise = CloudSampleLowDetail(cloudCoord + worldLightVec.xy, wind, sampleAltitude, thickness, amount, density);
-                        lightingNoise *= attenuation;
+                      lightingNoise *= attenuation;
 
 				float powder = 1.0 - 0.95 * exp(-pow(noise, 1.0 + noise * 7.0));
 				float directionalScattering = 1.0 - exp(-1.5 * (noise - lightingNoise * (0.875 + scattering * (0.075 + moonVisibility * 0.125))));
@@ -303,12 +311,11 @@ void computeVolumetricClouds(inout vec4 vc, in vec3 atmosphereColor, float z, fl
             vec3 cloudAmbientColor = fmix(atmColor22, atmColor22 * mix(vec3(1.0), nSkyColor * 0.5, isSpecificBiome), timeBrightnessSqrt) * (0.5 + sunVisibility * 0.5 - wetness * 0.5);
 
             vec3 cloudLightColor = fmix(lightCol, lightCol * nSkyColor * 2.0, timeBrightnessSqrt);
-                cloudLightColor *= 0.125 + cloudLighting * (0.875 + pow3(scattering) * 0.5 * moonVisibility);
+                 cloudLightColor *= 0.125 + cloudLighting * (0.875 + pow3(scattering) * 0.5 * moonVisibility);
                 //Aurora influence
                 #ifdef AURORA_LIGHTING_INFLUENCE
-                cloudLightColor.r *= 1.0 + pow3(kpIndex) * pulse * auroraVisibility * 4.0;
-                cloudLightColor.g *= 1.0 + auroraVisibility;
-                cloudLightColor /= 1.0 + auroraVisibility;
+                 cloudLightColor *= 1.0 + auroraColor * auroraVisibility * 2.0;
+                 cloudLightColor /= 1.0 + auroraVisibility;
                 #endif
 			vec3 cloudColor = fmix(cloudAmbientColor, cloudLightColor, ambientLighting * (0.5 + shadowFade * 0.5)) * fmix(vec3(1.0), biomeColor, isSpecificBiome * sunVisibility);
 

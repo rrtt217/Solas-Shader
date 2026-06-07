@@ -17,7 +17,6 @@ uniform int frameCounter;
 uniform int worldDay;
 uniform int moonPhase;
 uniform int worldTime;
-
 uniform float shadowFade;
 uniform float rainStrength;
 uniform float timeAngle, timeBrightness, wetness;
@@ -31,21 +30,22 @@ uniform vec3 skyColor;
 
 uniform float viewWidth, viewHeight;
 uniform float far, near;
+
 #ifdef DISTANT_HORIZONS
 uniform float dhFarPlane;
 #endif
+
 uniform float blindFactor, nightVision;
+
 #if MC_VERSION >= 11900
 uniform float darknessFactor;
 #endif
 
 uniform float frameTimeCounter;
-
 uniform ivec2 eyeBrightnessSmooth;
 
 #if defined END && MC_VERSION >= 12100
 uniform float endFlashIntensity;
-
 uniform vec3 endFlashPosition;
 #endif
 
@@ -65,9 +65,11 @@ uniform sampler2D colortex7;
 
 uniform sampler2D colortex0;
 uniform sampler2D depthtex0;
+
 #ifdef DISTANT_HORIZONS
 uniform sampler2D dhDepthTex0;
 #endif
+
 #ifdef VOXY
 uniform sampler2D vxDepthTexOpaque, vxDepthTexTrans;
 #endif
@@ -88,7 +90,6 @@ uniform sampler2D depthtex2;
 
 #if defined VOLUMETRIC_CLOUDS || defined END_DISK
 uniform sampler2D shadowtex1;
-
 uniform mat4 shadowModelView, shadowProjection;
 #endif
 
@@ -137,7 +138,7 @@ vec3 lightVec = sunVec;
 
 #ifdef VOXY
 vec3 ToWorldVoxy(vec3 viewPos) {
-    return mat3(vxModelViewInv) * viewPos + vxModelViewInv[3].xyz;
+	return mat3(vxModelViewInv) * viewPos + vxModelViewInv[3].xyz;
 }
 #endif
 
@@ -161,6 +162,7 @@ vec3 ToWorldVoxy(vec3 viewPos) {
 #ifdef ROUND_SUN_MOON
 #include "/lib/atmosphere/sunMoon.glsl"
 #endif
+
 #endif
 
 #if defined VOLUMETRIC_CLOUDS || defined END_DISK
@@ -175,264 +177,268 @@ vec3 ToWorldVoxy(vec3 viewPos) {
 
 // Main //
 void main() {
-    vec3 color = texture2D(colortex0, texCoord).rgb;
+	vec3 color = texture2D(colortex0, texCoord).rgb;
 
-    float z0 = texture2D(depthtex0, texCoord).r;
+	float z0 = texture2D(depthtex0, texCoord).r;
+
 	#ifdef DISTANT_HORIZONS
-	float dhZ0 = texture2D(dhDepthTex0, texCoord).r;
+		float dhZ0 = texture2D(dhDepthTex0, texCoord).r;
 	#endif
-    #ifdef VOXY
-    float vxZ0 = texture2D(vxDepthTexOpaque, texCoord).r;
-    #endif
+
+	#ifdef VOXY
+		float vxZ0 = texture2D(vxDepthTexOpaque, texCoord).r;
+	#endif
 
 	vec4 screenPos = vec4(texCoord, z0, 1.0);
 	vec4 viewPos = gbufferProjectionInverse * (screenPos * 2.0 - 1.0);
-		    viewPos /= viewPos.w;
+	viewPos /= viewPos.w;
+
 	vec4 worldPos = gbufferModelViewInverse * vec4(viewPos.xyz, 1.0);
-		    worldPos.xyz /= worldPos.w;
+	worldPos.xyz /= worldPos.w;
 
-    float atmosphereHardMixFactor = 0.0;
+	float atmosphereHardMixFactor = 0.0;
 
-    #if defined OVERWORLD
-    vec3 atmosphereColor = getAtmosphere(viewPos.xyz, worldPos.xyz, atmosphereHardMixFactor);
+	#if defined OVERWORLD
+		vec3 atmosphereColor = getAtmosphere(viewPos.xyz, worldPos.xyz, atmosphereHardMixFactor);
 	#elif defined NETHER
-	vec3 atmosphereColor = netherColSqrt.rgb * 0.25;
+		vec3 atmosphereColor = netherColSqrt.rgb * 0.25;
 	#elif defined END
-	vec3 atmosphereColor = endAmbientColSqrt * 0.175;
+		vec3 atmosphereColor = endAmbientColSqrt * 0.175;
 	#endif
 
 	#if defined OVERWORLD || defined END
-	vec3 nViewPos = normalize(viewPos.xyz);
-
-	float VoU = dot(nViewPos, upVec);
-	float VoS = clamp(dot(nViewPos, sunVec), 0.0, 1.0);
-	float VoM = clamp(dot(nViewPos, -sunVec), 0.0, 1.0);
+		vec3 nViewPos = normalize(viewPos.xyz);
+		float VoU = dot(nViewPos, upVec);
+		float VoS = clamp(dot(nViewPos, sunVec), 0.0, 1.0);
+		float VoM = clamp(dot(nViewPos, -sunVec), 0.0, 1.0);
 	#endif
 
-    //Volumetric Clouds
+	//Volumetric Clouds
 	vec4 vc = vec4(0.0);
 
 	#ifdef DISTANT_HORIZONS
-	float cloudDepth = 2.0 * dhFarPlane;
+		float cloudDepth = 2.0 * dhFarPlane;
 	#else
-	float cloudDepth = 2.0 * far;
+		float cloudDepth = 2.0 * far;
 	#endif
 
 	float blueNoiseDither = texture2D(noisetex, gl_FragCoord.xy / 512.0).b;
+
 	#ifdef TAA
-	      blueNoiseDither = fract(blueNoiseDither + 1.61803398875 * mod(float(frameCounter), 3600.0));
+		blueNoiseDither = fract(blueNoiseDither + 1.61803398875 * mod(float(frameCounter), 3600.0));
 	#endif
-	
+
 	#ifdef VOLUMETRIC_CLOUDS
-	computeVolumetricClouds(vc, atmosphereColor, z0, blueNoiseDither, cloudDepth);
+		computeVolumetricClouds(vc, atmosphereColor, z0, blueNoiseDither, cloudDepth);
 	#endif
 
 	#ifdef END_DISK
-	computeEndVolumetricClouds(vc, atmosphereColor, z0, blueNoiseDither, cloudDepth);
+		computeEndVolumetricClouds(vc, atmosphereColor, z0, blueNoiseDither, cloudDepth);
 	#endif
 
-    float occlusion = pow4(vc.a);
+	float occlusion = pow4(vc.a);
+	float auroraOcclusion = 0.0;
 
-    //Planar Clouds
-    vec4 pc = vec4(0.0);
+	#ifdef AURORA
+		vec3 aurora = vec3(0.0);
+		computeVolumetricAurora(aurora, z0, blueNoiseDither, caveFactor, occlusion, auroraOcclusion);
+	#endif
 
-    #ifdef PLANAR_CLOUDS
-    drawPlanarClouds(pc, atmosphereColor, worldPos.xyz, viewPos.xyz, VoU, caveFactor, occlusion);
-    #endif
+	//Planar Clouds
+	vec4 pc = vec4(0.0);
+
+	#ifdef PLANAR_CLOUDS
+		drawPlanarClouds(pc, atmosphereColor, worldPos.xyz, viewPos.xyz, VoU, caveFactor, occlusion);
+	#endif
 
 	//Sky
-    vec3 skyColor = atmosphereColor * (1.0 + Bayer8(gl_FragCoord.xy) / 64.0);
+	vec3 skyColor = atmosphereColor * (1.0 + Bayer8(gl_FragCoord.xy) / 64.0);
 
 	#ifndef NETHER
-    float nebulaFactor = 0.0;
+		float nebulaFactor = 0.0;
 
-    #ifdef ROUND_SUN_MOON
-    drawSunMoon(skyColor, worldPos.xyz, nViewPos, VoU, VoS, VoM, caveFactor, occlusion);
-    #endif
+		#ifdef ROUND_SUN_MOON
+			drawSunMoon(skyColor, worldPos.xyz, nViewPos, VoU, VoS, VoM, caveFactor, occlusion);
+		#endif
 
-	#if MC_VERSION >= 12104 && defined OVERWORLD
-    VoU *= 1.0 - isPaleGarden;
+		#if MC_VERSION >= 12104 && defined OVERWORLD
+			VoU *= 1.0 - isPaleGarden;
+		#endif
+
+		if (atmosphereHardMixFactor < 0.75) {
+			#ifdef MILKY_WAY
+				drawMilkyWay(skyColor, worldPos.xyz, VoU, VoM, caveFactor, nebulaFactor, auroraOcclusion);
+			#endif
+
+			#ifdef STARS
+				drawStars(skyColor, worldPos.xyz, VoU, VoM, caveFactor, nebulaFactor, occlusion, STAR_SIZE);
+
+				#ifdef SHOOTING_STARS
+					getShootingStars(skyColor, worldPos.xyz, VoU, VoS);
+				#endif
+			#endif
+
+			#ifdef RAINBOW
+				getRainbow(skyColor, worldPos.xyz, VoU, 1.75, 0.05, caveFactor);
+			#endif
+		}
+
+		#ifdef END_NEBULA
+			drawEndNebula(skyColor, worldPos.xyz, VoU, VoS);
+		#endif
+
+		#ifdef END_STARS
+			drawStars(skyColor, worldPos.xyz, VoU, VoS, 1.0, nebulaFactor, occlusion, STAR_SIZE);
+		#endif
+
+		//Planar Clouds
+		#ifdef PLANAR_CLOUDS
+			skyColor = fmix(skyColor, pc.rgb, pc.a * pc.a);
+		#endif
 	#endif
 
-    float auroraOcclusion = 0.0;
+	skyColor *= 1.0 - blindFactor;
 
-    #ifdef AURORA
-    drawAurora(skyColor, worldPos.xyz, caveFactor, occlusion, auroraOcclusion);
-    #endif
-
-    if (atmosphereHardMixFactor < 1.0) {
-        #ifdef MILKY_WAY
-        drawMilkyWay(skyColor, worldPos.xyz, VoU, VoM, caveFactor, nebulaFactor, auroraOcclusion);
-        #endif
-
-        #ifdef STARS
-        drawStars(skyColor, worldPos.xyz, VoU, VoM, caveFactor, nebulaFactor, occlusion, STAR_SIZE);
-
-        #ifdef SHOOTING_STARS
-        getShootingStars(skyColor, worldPos.xyz, VoU, VoS);
-        #endif
-        #endif
-
-        #ifdef RAINBOW
-        getRainbow(skyColor, worldPos.xyz, VoU, 1.75, 0.05, caveFactor);
-        #endif
-    }
-
-    #ifdef END_NEBULA
-    drawEndNebula(skyColor, worldPos.xyz, VoU, VoS);
-    #endif
-
-    #ifdef END_STARS
-    drawStars(skyColor, worldPos.xyz, VoU, VoS, 1.0, nebulaFactor, occlusion, STAR_SIZE);
-    #endif
-
-    //Planar Clouds
-    #ifdef PLANAR_CLOUDS
-    skyColor = fmix(skyColor, pc.rgb, pc.a * pc.a);
-    #endif
+	#if MC_VERSION >= 11900
+		skyColor *= 1.0 - darknessFactor;
 	#endif
 
-    skyColor *= 1.0 - blindFactor;
-    #if MC_VERSION >= 11900
-    skyColor *= 1.0 - darknessFactor;
-    #endif
+	#if defined DISTANT_HORIZONS
+		if (dhZ0 == 1.0 && z0 == 1.0) color = skyColor;
+	#elif defined VOXY
+		if (vxZ0 == 1.0 && z0 == 1.0) color = skyColor;
+	#else
+		if (z0 == 1.0) color = skyColor;
+	#endif
 
-    #if defined DISTANT_HORIZONS
-    if (dhZ0 == 1.0 && z0 == 1.0) color = skyColor;
-    #elif defined VOXY
-    if (vxZ0 == 1.0 && z0 == 1.0) color = skyColor;
-    #else
-    if (z0 == 1.0) color = skyColor;
-    #endif
+	//Voxy water
+	vec4 voxyTransparentColor = vec4(0.0);
 
-    //Voxy water
-    vec4 voxyTransparentColor = vec4(0.0);
+	#if defined VOXY && defined OVERWORLD
+		voxyTransparentColor = texture2D(colortex7, texCoord);
+		voxyTransparentColor.rgb /= max(voxyTransparentColor.a, 0.00001);
 
-    #if defined VOXY && defined OVERWORLD
-	voxyTransparentColor = texture2D(colortex7, texCoord);
-	voxyTransparentColor.rgb /= max(voxyTransparentColor.a, 0.00001);
+		float vxZ1 = texture2D(vxDepthTexTrans, texCoord).r;
+		vec4 vxScreenPos1 = vec4(texCoord, vxZ1, 1.0);
+		vec4 vxViewPos1 = vxProjInv * (vxScreenPos1 * 2.0 - 1.0);
+		vxViewPos1 /= vxViewPos1.w;
 
-	float vxZ1 = texture2D(vxDepthTexTrans, texCoord).r;
-
-	vec4 vxScreenPos1 = vec4(texCoord, vxZ1, 1.0);
-	vec4 vxViewPos1 = vxProjInv * (vxScreenPos1 * 2.0 - 1.0);
-	        vxViewPos1 /= vxViewPos1.w;
-	
-	voxyTransparentColor.a *= step(-vxViewPos1.z, -viewPos.z);
-
-	color.rgb = mix(color.rgb, pow(voxyTransparentColor.rgb, vec3(2.2 - wetness * 1.2)) * (2.2 - wetness * 1.2), voxyTransparentColor.a * (0.5 + wetness * 0.25));
-    #endif
+		voxyTransparentColor.a *= step(-vxViewPos1.z, -viewPos.z);
+		color.rgb = mix(color.rgb, pow(voxyTransparentColor.rgb, vec3(2.2 - wetness * 1.2)) * (2.2 - wetness * 1.2), voxyTransparentColor.a * (0.5 + wetness * 0.25));
+	#endif
 
 	//Apply fog before the clouds in Overworld
-    #ifdef SS_SHADOWS
-    float shadowVisibility = maxOf(abs(worldPos.xyz) / (vec3(min(shadowDistance, far))));
-            shadowVisibility = clamp(shadowVisibility, 0.0, 1.0);
-            shadowVisibility = 1.0 - pow6(shadowVisibility);
-    #endif
-    
+	#ifdef SS_SHADOWS
+		float shadowVisibility = maxOf(abs(worldPos.xyz) / (vec3(min(shadowDistance, far))));
+		shadowVisibility = clamp(shadowVisibility, 0.0, 1.0);
+		shadowVisibility = 1.0 - pow6(shadowVisibility);
+	#endif
+
 	#if defined DISTANT_HORIZONS
-	if (z0 != 1.0) {
-        #ifdef SS_SHADOWS
-        if (shadowVisibility < 1.0) {
-            vec3 screenSpaceShadow = computeScreenSpaceShadows(viewPos.xyz, lightVec, depthtex0, gbufferProjection, gbufferProjectionInverse, blueNoiseDither, voxyTransparentColor.a);
-            color.rgb *= mix(screenSpaceShadow, vec3(1.0), shadowVisibility);
-        }
-        #endif
+		if (z0 != 1.0) {
+			#ifdef SS_SHADOWS
+				if (shadowVisibility < 1.0) {
+					vec3 screenSpaceShadow = computeScreenSpaceShadows(viewPos.xyz, lightVec, depthtex0, gbufferProjection, gbufferProjectionInverse, blueNoiseDither, voxyTransparentColor.a);
+					color.rgb *= mix(screenSpaceShadow, vec3(1.0), shadowVisibility);
+				}
+			#endif
 
-        #ifdef SSAO
-        color.rgb *= getAmbientOcclusion(z0, depthtex0, gbufferProjectionInverse, voxyTransparentColor.a);
-        #endif
+			#ifdef SSAO
+				color.rgb *= getAmbientOcclusion(z0, depthtex0, gbufferProjectionInverse, voxyTransparentColor.a);
+			#endif
 
-		Fog(color, viewPos.xyz, atmosphereColor, z0);
-	} else if (dhZ0 != 1.0) {
-		vec4 dhScreenPos = vec4(texCoord, dhZ0, 1.0);
-		vec4 dhViewPos = dhProjectionInverse * (dhScreenPos * 2.0 - 1.0);
-			 dhViewPos /= dhViewPos.w;
+			Fog(color, viewPos.xyz, atmosphereColor, z0);
+		} else if (dhZ0 != 1.0) {
+			vec4 dhScreenPos = vec4(texCoord, dhZ0, 1.0);
+			vec4 dhViewPos = dhProjectionInverse * (dhScreenPos * 2.0 - 1.0);
+			dhViewPos /= dhViewPos.w;
 
-        #ifdef SS_SHADOWS
-        color *= computeScreenSpaceShadows(dhViewPos.xyz, lightVec, dhDepthTex0, dhProjection, dhProjectionInverse, blueNoiseDither, voxyTransparentColor.a);
-        #endif
+			#ifdef SS_SHADOWS
+				color *= computeScreenSpaceShadows(dhViewPos.xyz, lightVec, dhDepthTex0, dhProjection, dhProjectionInverse, blueNoiseDither, voxyTransparentColor.a);
+			#endif
 
-        #ifdef SSAO
-        color.rgb *= getAmbientOcclusion(dhZ0, dhDepthTex0, dhProjectionInverse, voxyTransparentColor.a);
-        #endif
+			#ifdef SSAO
+				color.rgb *= getAmbientOcclusion(dhZ0, dhDepthTex0, dhProjectionInverse, voxyTransparentColor.a);
+			#endif
 
-        Fog(color, dhViewPos.xyz, atmosphereColor, z0);
-	}
+			Fog(color, dhViewPos.xyz, atmosphereColor, z0);
+		}
 	#elif defined VOXY
-    if (z0 < 1.0) {
-        #ifdef SS_SHADOWS
-        if (shadowVisibility < 1.0) {
-            vec3 screenSpaceShadow = computeScreenSpaceShadows(viewPos.xyz, lightVec, depthtex0, gbufferProjection, gbufferProjectionInverse, blueNoiseDither, voxyTransparentColor.a);
-            color.rgb *= mix(screenSpaceShadow, vec3(1.0), shadowVisibility);
-        }
-        #endif
+		if (z0 < 1.0) {
+			#ifdef SS_SHADOWS
+				if (shadowVisibility < 1.0) {
+					vec3 screenSpaceShadow = computeScreenSpaceShadows(viewPos.xyz, lightVec, depthtex0, gbufferProjection, gbufferProjectionInverse, blueNoiseDither, voxyTransparentColor.a);
+					color.rgb *= mix(screenSpaceShadow, vec3(1.0), shadowVisibility);
+				}
+			#endif
 
-        #ifdef SSAO
-        color.rgb *= getAmbientOcclusion(z0, depthtex0, gbufferProjectionInverse, voxyTransparentColor.a);
-        #endif
+			#ifdef SSAO
+				color.rgb *= getAmbientOcclusion(z0, depthtex0, gbufferProjectionInverse, voxyTransparentColor.a);
+			#endif
 
-        Fog(color, viewPos.xyz, atmosphereColor, z0);
-    #if !defined END
-    } else if (vxZ0 < 1.0) {
-    #else
-    } else if (vxZ0 <= 1.0) {
-    #endif
-        vec4 vxScreenPos = vec4(texCoord, vxZ0, 1.0);
-        vec4 vxViewPos = vxProjInv * (vxScreenPos * 2.0 - 1.0);
-                vxViewPos /= vxViewPos.w;
+			Fog(color, viewPos.xyz, atmosphereColor, z0);
+		#if !defined END
+		} else if (vxZ0 < 1.0) {
+		#else
+		} else if (vxZ0 <= 1.0) {
+		#endif
+			vec4 vxScreenPos = vec4(texCoord, vxZ0, 1.0);
+			vec4 vxViewPos = vxProjInv * (vxScreenPos * 2.0 - 1.0);
+			vxViewPos /= vxViewPos.w;
 
-        if (vxZ0 < 1.0) {
-            #ifdef SS_SHADOWS
-            if (shadowVisibility < 1.0) {
-            vec3 screenSpaceShadow = computeScreenSpaceShadows(vxViewPos.xyz, lightVec, vxDepthTexOpaque, vxProj, vxProjInv, blueNoiseDither, voxyTransparentColor.a);
-            color.rgb *= mix(screenSpaceShadow, vec3(1.0), shadowVisibility);
-            }
-		    #endif
+			if (vxZ0 < 1.0) {
+				#ifdef SS_SHADOWS
+					if (shadowVisibility < 1.0) {
+						vec3 screenSpaceShadow = computeScreenSpaceShadows(vxViewPos.xyz, lightVec, vxDepthTexOpaque, vxProj, vxProjInv, blueNoiseDither, voxyTransparentColor.a);
+						color.rgb *= mix(screenSpaceShadow, vec3(1.0), shadowVisibility);
+					}
+				#endif
 
-            #ifdef SSAO
-            color.rgb *= getAmbientOcclusion(vxZ0, vxDepthTexOpaque, vxProjInv, voxyTransparentColor.a);
-            #endif
-        }
+				#ifdef SSAO
+					color.rgb *= getAmbientOcclusion(vxZ0, vxDepthTexOpaque, vxProjInv, voxyTransparentColor.a);
+				#endif
+			}
 
-        Fog(color, vxViewPos.xyz, atmosphereColor, vxZ0);
-    }
-    #else
-    if (z0 < 1.0) {
-        #ifdef SSAO
-        color.rgb *= getAmbientOcclusion(z0, depthtex0, gbufferProjectionInverse, voxyTransparentColor.a);
-        #endif
+			Fog(color, vxViewPos.xyz, atmosphereColor, vxZ0);
+		}
+	#else
+		if (z0 < 1.0) {
+			#ifdef SSAO
+				color.rgb *= getAmbientOcclusion(z0, depthtex0, gbufferProjectionInverse, voxyTransparentColor.a);
+			#endif
 
-        Fog(color, viewPos.xyz, atmosphereColor, z0);
-    }
-    #endif
+			Fog(color, viewPos.xyz, atmosphereColor, z0);
+		}
+	#endif
+
+	//Aurora
+	#ifdef AURORA
+		color += aurora;
+	#endif
 
 	//Volumetric Clouds
 	#if defined VOLUMETRIC_CLOUDS || defined END_DISK
-	vc.rgb = pow(vc.rgb, vec3(1.0 / 2.2));
-    vc.rgb = mix(vc.rgb, atmosphereColor, 0.4);
+		vc.rgb = pow(vc.rgb, vec3(1.0 / 2.2));
+		vc.rgb = mix(vc.rgb, atmosphereColor, 0.4);
 
-	#ifdef DISTANT_HORIZONS
-	cloudDepth /= (2.0 * dhFarPlane);
-	#else
-	float farPlane = far + vxRenderDistance;
-	cloudDepth /= (2.0 * farPlane);
+		#ifdef DISTANT_HORIZONS
+			cloudDepth /= (2.0 * dhFarPlane);
+		#else
+			float farPlane = far + vxRenderDistance;
+			cloudDepth /= (2.0 * farPlane);
+		#endif
+
+		color = fmix(color, vc.rgb, vc.a);
 	#endif
 
-	color = fmix(color, vc.rgb, vc.a);
-	#endif
-
-    /* DRAWBUFFERS:045 */
-    gl_FragData[0].rgb = color;
+	/* DRAWBUFFERS:045 */
+	gl_FragData[0].rgb = color;
 	gl_FragData[1].rgb = pow(color.rgb, vec3(0.125)) * 0.5;
 	gl_FragData[2].r = cloudDepth;
 }
-
 #endif
 
-
 //**//**//**//**//**//**//**//**//**//**//**//**//**//**//
-
 
 #ifdef VSH
 

@@ -4,8 +4,8 @@ float getNoise(vec2 pos) {
 
 void drawStars(inout vec3 color, in vec3 worldPos, in float VoU, in float VoL, in float caveFactor, in float nebulaFactor, in float occlusion, in float size) {
 	#ifdef OVERWORLD
-    float altitudeFactor = min(max(cameraPosition.y, 0.0) / KARMAN_LINE, 1.0);
-	float visibility = moonVisibility * moonVisibility * (1.0 - wetness) * sqrt(max(VoU, 0.0)) * caveFactor * (1.0 - occlusion) * (1.0 - altitudeFactor) + altitudeFactor * sqrt(VoU * 0.5 + 0.5);
+    float spaceFactor = min(max(cameraPosition.y, 0.0) / KARMAN_LINE, 1.0);
+	float visibility = moonVisibility * moonVisibility * (1.0 - wetness) * sqrt(max(VoU, 0.0)) * caveFactor * (1.0 - occlusion) * (1.0 - spaceFactor) + spaceFactor * sqrt(VoU * 0.5 + 0.5);
 	#else
 	float visibility = 1.0;
 	#endif
@@ -35,7 +35,7 @@ void drawStars(inout vec3 color, in vec3 worldPos, in float VoU, in float VoL, i
                 stars = clamp(stars, 0.0, 16.0);
 
 		#ifdef OVERWORLD
-		color += (stars + pow2(max(starNoise - 0.95, 0.0)) * 2048.0) * mix(lightNight, vec3(0.25), 0.35 + 0.25 * altitudeFactor) * visibility * STAR_BRIGHTNESS;
+		color += (stars + pow2(max(starNoise - 0.95, 0.0)) * 2048.0) * mix(lightNight, vec3(0.25), 0.35 + 0.25 * spaceFactor) * visibility * STAR_BRIGHTNESS;
 		#else
 		#ifdef END_BLACK_HOLE
 		float hole = pow(pow32(VoL), END_BLACK_HOLE_SIZE);

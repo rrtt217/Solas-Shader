@@ -1,8 +1,7 @@
 void drawSunMoon(inout vec3 color, in vec3 worldPos, in vec3 nViewPos, in float VoU, in float VoS, in float VoM, in float caveFactor, inout float occlusion) {
-    int moonPhase = 5;
-    float altitudeFactor = min(max(cameraPosition.y, 0.0) / KARMAN_LINE, 1.0);
+    float spaceFactor = min(max(cameraPosition.y, 0.0) / KARMAN_LINE, 1.0);
     float visibility = (1.0 - wetness) * caveFactor * (1.0 - occlusion);
-            visibility *= fmix(sqrt(max(VoU, 0.0)), 1.0, altitudeFactor);
+            visibility *= fmix(sqrt(max(VoU, 0.0)), 1.0, spaceFactor);
 
     if (visibility > 0.0) {
         float sun = max(pow32(pow32(VoS)) - 0.4, 0.0) * 16.0 * sunVisibility;
@@ -24,9 +23,9 @@ void drawSunMoon(inout vec3 color, in vec3 worldPos, in vec3 nViewPos, in float 
             }
         }
 
-        color += glare * lightColSqrt * visibility * (1.0 - altitudeFactor);
-        color += mix(lightCol, vec3(0.4, 0.38, 0.36), altitudeFactor) * sun * visibility;
-        color += normalize(mix(lightCol, sqrt(lightNight), clamp(VoU + altitudeFactor, 0.0, 1.0))) * moon * visibility;
+        color += glare * lightColSqrt * visibility * (1.0 - spaceFactor);
+        color += mix(lightCol, vec3(0.4, 0.38, 0.36), spaceFactor) * sun * visibility;
+        color += normalize(mix(lightCol, sqrt(lightNight), clamp(VoU + spaceFactor, 0.0, 1.0))) * moon * visibility;
         occlusion += (sun + moon) * 16.0;
     }
 }

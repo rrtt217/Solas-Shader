@@ -240,32 +240,41 @@ void gbuffersLighting(in vec4 color, inout vec4 albedo, in vec3 screenPos, in ve
     vec3 sceneLighting = fmix(ambientCol, lightCol, shadow * rainFactor * shadowFade) * (0.25 + lightmap.y * 0.75);
             sceneLighting *= 1.0 + sss * shadow * 2.0;
 
+    //Aurora influence
     #ifdef AURORA_LIGHTING_INFLUENCE
+    //The index of geomagnetic activity. Determines the brightness of Aurora, its widespreadness across the sky and tilt factor
+    float kpIndex = abs(worldDay % 9 - worldDay % 4);
+            kpIndex = kpIndex - int(kpIndex == 1) + int(kpIndex > 7 && worldDay % 10 == 0);
+            kpIndex = min(max(kpIndex, 0) + isSnowy * 4, 9);
+    #ifdef AURORA_ALWAYS_VISIBLE
+            kpIndex = 9;
+    #endif
+
     //Total visibility of aurora based on multiple factors
     float auroraVisibility = pow6(moonVisibility) * (1.0 - wetness) * caveFactor;
 
-    if (auroraVisibility > 0.0) {
-        //The index of geomagnetic activity. Determines the brightness of Aurora, its widespreadness across the sky and tilt factor
-        float kpIndex = abs(worldDay % 9 - worldDay % 4);
-                kpIndex = kpIndex - int(kpIndex == 1) + int(kpIndex > 7 && worldDay % 10 == 0);
-                kpIndex = min(max(kpIndex, 0) + isSnowy * 4, 9);
+    //Aurora tends to get brighter and dimmer when plasma arrives or fades away
+    float pulse = 0.5 + 0.5 * sin(frameTimeCounter * 0.08 + sin(frameTimeCounter * 0.013) * 0.6);
+          pulse = smoothstep(0.15, 0.85, pulse);
 
-        #ifdef AURORA_ALWAYS_VISIBLE
-                kpIndex = 9;
-        #endif
+    float longPulse = sin(frameTimeCounter * 0.025 + sin(frameTimeCounter * 0.004) * 0.8);
+          longPulse = longPulse * (1.0 - 0.15 * abs(longPulse));
 
-        //Aurora tends to get brighter and dimmer when plasma arrives or fades away
-        float pulse = 0.5 + 0.5 * sin(frameTimeCounter * 0.08 + sin(frameTimeCounter * 0.013) * 0.6);
-                pulse = smoothstep(0.15, 0.85, pulse);
+    kpIndex *= 1.0 + longPulse * 0.25;
+    kpIndex /= 9.0;
 
-        float longPulse = sin(frameTimeCounter * 0.025 + sin(frameTimeCounter * 0.004) * 0.8);
-                longPulse = longPulse * (1.0 - 0.15 * abs(longPulse));
+    //When aurora turns red
+	float redPhase = pow3(kpIndex) * (1.0 - pulse);
 
-        kpIndex *= 1.0 + longPulse * 0.25;
-        kpIndex /= 9.0;
-        auroraVisibility *= kpIndex * 0.5;
-        sceneLighting *= (1.0 - auroraVisibility) + auroraVisibility * vec3(0.05 + (1.0 + pulse) * pow3(kpIndex), 1.55, 0.40);
-    }
+    auroraVisibility *= kpIndex * (1.0 + max(longPulse * 0.5, 0.0));
+    auroraVisibility = min(auroraVisibility, 2.0) * AURORA_BRIGHTNESS;
+
+    float colorMixer = 0.65 + pow3(kpIndex) * pulse * 0.1;
+    vec3 lowColor = vec3(0.45, 1.55 - redPhase * 0.5, 0.0);
+    vec3 upColor = vec3(0.95 + redPhase * 5.0, 0.10, 0.0);
+    vec3 auroraColor = fmix(lowColor, upColor, colorMixer);
+
+    sceneLighting *= (1.0 - auroraVisibility) + auroraVisibility * auroraColor;
     #endif
     #elif defined END
     vec3 sceneLighting = fmix(endAmbientCol, endLightCol, shadow) * 0.25;
