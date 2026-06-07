@@ -150,13 +150,10 @@ option.SHOOTING_STARS_TRAIL_LENGTH=Длина Следа Метеоров
 screen.AURORA_CONFIG=Настройки Полярного Сияния
 
 option.AURORA=Полярное Сияние
-option.AURORA_COLD_BIOME_VISIBILITY=Сияние в холодных биомах
-option.AURORA_COLD_BIOME_VISIBILITY.comment=Переключает видимость Полярного Сияния только в снежных биомах
-option.AURORA_FULL_MOON_VISIBILITY=Сияние при полной луне
-option.AURORA_FULL_MOON_VISIBILITY.comment=Переключает видимость Полярного Сияния только при полной луне
 option.AURORA_LIGHTING_INFLUENCE=Освещение Объектов
 option.AURORA_LIGHTING_INFLUENCE.comment=Позволяет ярким полярным сиянияем слегка освещать землю и облака.
 option.AURORA_BRIGHTNESS=Яркость Сияния
+option.AURORA_ALTITUDE=Высота Сияния
 
 #----------------------------------------------------------------------------------#
 

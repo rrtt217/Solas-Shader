@@ -161,6 +161,7 @@ option.AURORA_LIGHTING_INFLUENCE.comment=Allows powerful aurora to slightly lit 
 option.AURORA_ALWAYS_VISIBLE=Constant Visibility
 option.AURORA_ALWAYS_VISIBLE.comment=Makes aurora appear every night
 option.AURORA_BRIGHTNESS=Aurora Brightness
+option.AURORA_ALTITUDE=Aurora Altitude
 
 #----------------------------------------------------------------------------------#
 
