@@ -14,10 +14,8 @@ uniform int frameCounter;
 uniform float frameTimeCounter;
 #endif
 
-#if defined FXAA || defined TAA
 uniform float viewWidth, viewHeight;
 uniform float aspectRatio;
-#endif
 
 uniform sampler2D depthtex1;
 uniform sampler2D colortex1;

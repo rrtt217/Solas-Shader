@@ -26,10 +26,45 @@ void getDynamicWeather(inout float speed, inout float amount, inout float thickn
 	#endif
 }
 
+float CloudLocalTop(float noiseBase) {
+	float localTop = clamp((noiseBase - 0.48) * 2.15, 0.0, 1.0);
+	      localTop = localTop * localTop * (3.0 - 2.0 * localTop);
+
+	return mix(0.70, 1.08, localTop);
+}
+
+float CloudVerticalCoverage(float sampleAltitude, float noiseBase) {
+	float localTop = CloudLocalTop(noiseBase);
+
+	float bottomPenalty = (1.0 - smoothstep(0.00, 0.18, sampleAltitude)) * 0.35;
+	float topPenalty = smoothstep(localTop - 0.20, localTop + 0.12, sampleAltitude) * 0.85;
+	float planeGuard = smoothstep(0.94, 1.0, sampleAltitude) * 0.90;
+
+	return bottomPenalty + max(topPenalty, planeGuard);
+}
+
+float CloudHeightDensity(float sampleAltitude, float noiseBase) {
+	float localTop = CloudLocalTop(noiseBase);
+
+	float bottomFade = smoothstep(0.00, 0.18, sampleAltitude);
+	float bodyFade = 0.82 + smoothstep(0.16, 0.58, sampleAltitude) * 0.18;
+	float topFade = 1.0 - smoothstep(localTop - 0.20, localTop + 0.14, sampleAltitude) * 0.45;
+	float planeFade = 1.0 - smoothstep(0.965, 1.0, sampleAltitude);
+
+	return clamp((0.30 + bottomFade * 0.70) * bodyFade * topFade * planeFade, 0.0, 1.08);
+}
+
 float cloudSampleBasePerlinWorley(vec2 coord) {
-	float noiseBase = texture2D(noisetex, coord).g;
-            noiseBase = (1.0 - noiseBase) * 0.5 + 0.075;
-            noiseBase += texture2D(noisetex, coord * 2.0).r * 0.5;
+	float perlinBase = texture2D(noisetex, coord * 0.35 + vec2(0.17, -0.11)).r * 0.55;
+	      perlinBase += texture2D(noisetex, coord * 1.25 + vec2(-0.07, 0.19)).r * 0.45;
+
+	float worleyBase = (1.0 - texture2D(noisetex, coord * 0.75).g) * 0.62;
+	      worleyBase += (1.0 - texture2D(noisetex, coord * 2.15 + vec2(0.37, -0.41)).g) * 0.38;
+
+	float perlinWorley = perlinBase * (0.52 + worleyBase);
+	float noiseBase = perlinBase * 0.45 + perlinWorley * 0.55;
+	      noiseBase = clamp((noiseBase - 0.48) * 1.38 + 0.48, 0.0, 1.0);
+	      noiseBase = clamp(noiseBase * 1.05 + 0.095, 0.0, 1.075);
 
 	return noiseBase;
 }
@@ -40,8 +75,10 @@ float CloudSampleDetail(vec2 coord, float sampleAltitude, float thickness) {
 
 	float noiseDetailLow = texture2D(noisetex, coord.xy + detailZ).g;
 	float noiseDetailHigh = texture2D(noisetex, coord.xy + detailZ + 0.04).g;
-
 	float noiseDetail = fmix(noiseDetailLow, noiseDetailHigh, detailFrac);
+
+	float blueDetail = texture2D(noisetex, coord.xy * 0.25 + detailZ + vec2(0.41, -0.17)).b;
+	      noiseDetail *= 1.0 + blueDetail * 0.25;
 
 	return noiseDetail;
 }
@@ -49,7 +86,7 @@ float CloudSampleDetail(vec2 coord, float sampleAltitude, float thickness) {
 float CloudCoverageDefault(float sampleAltitude, float amount) {
 	float noiseCoverage = abs(sampleAltitude - 0.125);
 
-	noiseCoverage *= sampleAltitude > 0.125 ? (2.14 - amount * 0.1) : 8.0;
+	noiseCoverage *= sampleAltitude > 0.125 ? (2.5 - amount * 0.1) : 8.0;
 	noiseCoverage = noiseCoverage * noiseCoverage * 4.0;
 
 	return noiseCoverage;
@@ -83,8 +120,10 @@ float CloudSample(vec2 coord, vec2 wind, float sampleAltitude, float thickness, 
 	float noiseBase = cloudSampleBasePerlinWorley(baseCoord);
 	float noiseDetail = CloudSampleDetail(detailCoord, sampleAltitude, thickness);
 	float noiseCoverage = CloudCoverageDefault(sampleAltitude, amount);
+	      noiseCoverage += CloudVerticalCoverage(sampleAltitude, noiseBase);
 
 	float noise = CloudCombineDefault(noiseBase, noiseDetail, noiseCoverage, amount, density);
+	      noise *= CloudHeightDensity(sampleAltitude, noiseBase);
 
 	return noise;
 }
@@ -96,8 +135,10 @@ float CloudSampleLowDetail(vec2 coord, vec2 wind, float sampleAltitude, float th
 
 	float noiseBase = cloudSampleBasePerlinWorley(baseCoord);
 	float noiseCoverage = CloudCoverageDefault(sampleAltitude, amount);
+	      noiseCoverage += CloudVerticalCoverage(sampleAltitude, noiseBase);
 
 	float noise = CloudCombineDefault(noiseBase, 0.0, noiseCoverage, amount, density);
+	      noise *= CloudHeightDensity(sampleAltitude, noiseBase);
 
 	return noise;
 }
@@ -194,7 +235,8 @@ void computeVolumetricClouds(inout vec4 vc, in vec3 atmosphereColor, float z, fl
         int maxsampleCount = 24;
 
         float cloudBottom = height;
-        float cloudTop = cloudBottom + thickness * scale;
+        float cloudSpan = thickness * scale * 1.18;
+        float cloudTop = cloudBottom + cloudSpan;
 
         float lowerPlane = (cloudBottom - cameraPosition.y) / nWorldPos.y;
         float upperPlane = (cloudTop - cameraPosition.y) / nWorldPos.y;
@@ -247,7 +289,7 @@ void computeVolumetricClouds(inout vec4 vc, in vec3 atmosphereColor, float z, fl
             float xzNormalizeFactor = 10.0 / max(abs(height - 72.0), 56.0);
 
 			vec3 worldLightVec = normalize(ToWorld(lightVec * 100000000.0));
-                 worldLightVec *= 2.5 * shadowFade;
+                 worldLightVec *= (4.0 - scattering * scattering * 2.0) * shadowFade;
 
             for (int i = 0; i < sampleCount; i++, rayPos += rayIncrement, sampleTotalLength += rayLength) {
                 if (cloud > 0.99 || (lViewPos < sampleTotalLength && z < 1.0) || sampleTotalLength > distance * 32.0) break;
@@ -266,22 +308,25 @@ void computeVolumetricClouds(inout vec4 vc, in vec3 atmosphereColor, float z, fl
 					if (texture2DShadow(shadowtex1, ToShadow(worldPos)) <= 0.0) break;
 				}
 
-                float sampleAltitude = InvLerp(rayPos.y, cloudBottom, cloudTop);
                 float xzNormalizedDistance = length(rayPos.xz - cameraPosition.xz) * xzNormalizeFactor;
                 vec2 cloudCoord = rayPos.xz / scale;
 
+				float sampleAltitude = InvLerp(rayPos.y, cloudBottom, cloudTop);
                 float attenuation = step(cloudBottom, rayPos.y) * step(rayPos.y, cloudTop);
 
                 float noise = CloudSample(cloudCoord, wind, sampleAltitude, thickness, amount, density);
                       noise *= attenuation;
 
-                float lightingNoise = CloudSampleLowDetail(cloudCoord + worldLightVec.xy, wind, sampleAltitude, thickness, amount, density);
-                      lightingNoise *= attenuation;
+				float sampleAltitudeL = InvLerp(rayPos.y + worldLightVec.y, cloudBottom, cloudTop);
+                float attenuationL = step(cloudBottom, rayPos.y + worldLightVec.y) * step(rayPos.y + worldLightVec.y, cloudTop);
 
-				float powder = 1.0 - 0.95 * exp(-pow(noise, 1.0 + noise * 7.0));
-				float directionalScattering = 1.0 - exp(-1.5 * (noise - lightingNoise * (0.875 + scattering * (0.075 + moonVisibility * 0.125))));
-				float sampleLighting1 = clamp(powder * directionalScattering * (2.0 + scattering), 0.0, 1.0);
-                float sampleLighting2 = pow(sampleAltitude, 0.75 - scattering * 0.5) * (1.0 + directionalScattering * 0.5);
+                float lightingNoise = CloudSampleLowDetail(cloudCoord + worldLightVec.xy, wind, sampleAltitudeL, thickness, amount, density);
+                      lightingNoise *= attenuationL;
+
+				float powder = 1.0 - exp(-pow4(noise) * 0.75);
+				float lightTransmittance = exp(-lightingNoise * 4.0) * (1.0 + scattering * scattering);
+				float sampleLighting1 = clamp(powder * lightTransmittance, 0.0, 1.0);
+                float sampleLighting2 = clamp(sampleAltitude * (2.0 + lightTransmittance * 2.0 - scattering), 0.0, 1.0);
 
                 noise *= step(xzNormalizedDistance, fadeEnd);
 
@@ -311,13 +356,14 @@ void computeVolumetricClouds(inout vec4 vc, in vec3 atmosphereColor, float z, fl
             vec3 cloudAmbientColor = fmix(atmColor22, atmColor22 * mix(vec3(1.0), nSkyColor * 0.5, isSpecificBiome), timeBrightnessSqrt) * (0.5 + sunVisibility * 0.5 - wetness * 0.5);
 
             vec3 cloudLightColor = fmix(lightCol, lightCol * nSkyColor * 2.0, timeBrightnessSqrt);
-                 cloudLightColor *= 0.125 + cloudLighting * (0.875 + pow3(scattering) * 0.5 * moonVisibility);
+                 cloudLightColor *= 0.125 + cloudLighting * ((0.475 + 0.4 * shadowFade) + scattering * 1.125);
+				 cloudLightColor = fmix(cloudAmbientColor, cloudLightColor, fmix(0.5 + cloudLighting, 1.0, scattering));
                 //Aurora influence
                 #ifdef AURORA_LIGHTING_INFLUENCE
                  cloudLightColor *= 1.0 + auroraColor * auroraVisibility * 2.0;
                  cloudLightColor /= 1.0 + auroraVisibility;
                 #endif
-			vec3 cloudColor = fmix(cloudAmbientColor, cloudLightColor, ambientLighting * (0.5 + shadowFade * 0.5)) * fmix(vec3(1.0), biomeColor, isSpecificBiome * sunVisibility);
+			vec3 cloudColor = fmix(cloudAmbientColor, cloudLightColor, ambientLighting) * fmix(vec3(1.0), biomeColor, isSpecificBiome * sunVisibility);
 
             float opacity = clamp(fmix(VC_OPACITY * (1.0 - wetness * 0.25), 1.0, (max(0.0, cameraPosition.y - thickness * 10.0) / height)), 0.0, 1.0);
 
@@ -325,7 +371,7 @@ void computeVolumetricClouds(inout vec4 vc, in vec3 atmosphereColor, float z, fl
             opacity = fmix(opacity, opacity * 0.5, isPaleGarden);
             #endif
 
-            cloudFaded *= cloudFaded * opacity;
+            cloudFaded = pow(max(cloudFaded, 0.0), 1.82) * opacity;
             vc = vec4(cloudColor, cloudFaded * visibility);
         }
     }

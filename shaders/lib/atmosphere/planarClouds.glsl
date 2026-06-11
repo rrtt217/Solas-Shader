@@ -72,7 +72,7 @@ void drawPlanarClouds(inout vec4 pc, in vec3 atmosphereColor, in vec3 worldPos, 
         //The index of geomagnetic activity. Determines the brightness of Aurora, its widespreadness across the sky and tilt factor
         float kpIndex = abs(worldDay % 9 - worldDay % 4);
               kpIndex = kpIndex - int(kpIndex == 1) + int(kpIndex > 7 && worldDay % 10 == 0);
-              kpIndex = min(max(kpIndex, 0) + isSnowy * 4, 9);
+              kpIndex = min(max(kpIndex, 0) + isSnowy * 3, 9);
         #ifdef AURORA_ALWAYS_VISIBLE
               kpIndex = 9;
         #endif

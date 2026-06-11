@@ -84,7 +84,7 @@ void computeVolumetricAurora(inout vec3 aurora, float z, float dither, in float 
 	//The index of geomagnetic activity. Determines the brightness of Aurora, its widespreadness across the sky and tilt factor
 	float kpIndex = abs(worldDay % 9 - worldDay % 4);
 	      kpIndex = kpIndex - int(kpIndex == 1) + int(kpIndex > 7 && worldDay % 10 == 0);
-	      kpIndex = min(max(kpIndex, 0) + isSnowy * 4, 9);
+	      kpIndex = min(max(kpIndex, 0) + isSnowy * 3, 9);
 	#ifdef AURORA_ALWAYS_VISIBLE
 		  kpIndex = 9;
 	#endif
@@ -124,7 +124,7 @@ void computeVolumetricAurora(inout vec3 aurora, float z, float dither, in float 
 	      visibility *= kpIndex * (1.0 + max(longPulse * 0.5, 0.0));
 	      visibility = min(visibility, 2.0) * AURORA_BRIGHTNESS;
     
-	if (visibility > 0.05) {
+	if (visibility > 0.01) {
 		//Determines the quality of aurora. Since it stretches a lot during strong geomagnetic storms, we need more samples
 		int samples = int(8 + kpIndex * 8);
 		float sampleStep = 1.0 / samples;
@@ -175,7 +175,7 @@ void computeVolumetricAurora(inout vec3 aurora, float z, float dither, in float 
 
 			//We don't want the aurora to render infintely, we also want it to be closer to the north when Kp is low
 			float westEast = clamp(1.0 - abs(planeCoord.x * 0.05) + kpIndex * kpIndex, 0.0, 1.0); //Fade out aurora closer to the western/eastern horizons
-			float north = clamp(50.0 * kpIndex * kpIndex * kpIndex - planeCoord.z, 0.0, 1.0); //Make aurora appear stronger in north when looking from the ground
+			float north = pow3(clamp(50.0 * kpIndex * kpIndex * kpIndex - planeCoord.z, 0.0, 1.0)); //Make aurora appear stronger in north when looking from the ground
             float poles = clamp(pow(abs(planeCoord.z * 0.1), 7.0 - kpIndex * kpIndex * 4.0), 0.0, 1.0); //Make aurora appear stronger near poles when looking from space
 			float distanceFactor = clamp(1.0 - length(planeCoord.xz) * fmix(0.02, 0.08, spaceFactor), 0.0, 1.0); //Limit the max render distance
 			float auroraDistribution = distanceFactor * westEast * fmix(north, poles, spaceFactor);
