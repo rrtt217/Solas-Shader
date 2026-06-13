@@ -147,9 +147,9 @@ void main() {
 
 	//Tonemap & Film Grain
 	#ifdef HDR_ENABLED
-		color = TONEMAP(color * TONEMAP_BRIGHTNESS);
+		color = Uncharted2Tonemap(color * TONEMAP_BRIGHTNESS);
 	#else
-		color = TONEMAP(color * TONEMAP_BRIGHTNESS) / Uncharted2OriginalTonemap(vec3(TONEMAP_WHITE_THRESHOLD));
+		color = Uncharted2Tonemap(color * TONEMAP_BRIGHTNESS) / Uncharted2OriginalTonemap(vec3(TONEMAP_WHITE_THRESHOLD));
 	#endif
 	#ifdef HDR_ENABLED
 		color *= HdrGamePaperWhiteBrightness / HdrUIBrightness;

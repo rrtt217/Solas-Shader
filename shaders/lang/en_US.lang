@@ -632,12 +632,6 @@ option.LIGHT_I=Intensity
 
 screen.POST=Cinematic Effects & Post Processing
 
-option.TONEMAP=Tonemap Operator
-option.TONEMAP.comment=Control how the scene color is compressed into display ability. The following "Contrast", "Highlights Intensity" and "Shadows Intensity" option only works for default tonemap operator.
-value.Uncharted2Tonemap=(Default) Uncharted 2
-value.AgXAllenwpTonemap=AgX Allenwp
-value.GTTonemap=GT
-value.GT7Tonemap=GT7
 option.SHARPENING=Image Sharpening
 option.CHROMATIC_ABERRATION=Chromatic Aberration (CA)
 option.CHROMATIC_ABERRATION_STRENGTH=CA Strength

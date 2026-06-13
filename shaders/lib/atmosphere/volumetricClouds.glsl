@@ -55,8 +55,8 @@ float CloudHeightDensity(float sampleAltitude, float noiseBase) {
 }
 
 float cloudSampleBase(vec2 coord) {
-	float perlinBase = texture2D(noisetex, coord * 0.5 + vec2(0.17, -0.11)).r * 0.6;
-	      perlinBase += texture2D(noisetex, coord * 1.5 + vec2(-0.07, 0.19)).r * 0.4;
+	float perlinBase = texture(noisetex, coord * 0.5 + vec2(0.17, -0.11)).r * 0.6;
+	      perlinBase += texture(noisetex, coord * 1.5 + vec2(-0.07, 0.19)).r * 0.4;
 		  perlinBase = perlinBase * 0.9 + pow3(perlinBase) * 0.4;
 
 	return clamp((perlinBase - 0.35) * 1.4 + 0.5, 0.0, 1.0);
@@ -66,8 +66,8 @@ float CloudSampleDetail(vec2 coord, float sampleAltitude, float thickness) {
 	float detailZ = floor(sampleAltitude * float(thickness)) * 0.04;
 	float detailFrac = fract(sampleAltitude * float(thickness));
 
-	float noiseDetailLow = texture2D(noisetex, coord.xy + detailZ).g;
-	float noiseDetailHigh = texture2D(noisetex, coord.xy + detailZ + 0.04).g;
+	float noiseDetailLow = texture(noisetex, coord.xy + detailZ).g;
+	float noiseDetailHigh = texture(noisetex, coord.xy + detailZ + 0.04).g;
 
 	float noiseDetail = fmix(noiseDetailLow, noiseDetailHigh, detailFrac);
 

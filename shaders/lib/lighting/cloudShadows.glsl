@@ -50,8 +50,8 @@ float CloudHeightDensity(float sampleAltitude, float noiseBase) {
 }
 
 float cloudSampleBase(vec2 coord) {
-	float perlinBase = texture2D(noisetex, coord * 0.5 + vec2(0.17, -0.11)).r * 0.6;
-	      perlinBase += texture2D(noisetex, coord * 1.5 + vec2(-0.07, 0.19)).r * 0.4;
+	float perlinBase = texture(noisetex, coord * 0.5 + vec2(0.17, -0.11)).r * 0.6;
+	      perlinBase += texture(noisetex, coord * 1.5 + vec2(-0.07, 0.19)).r * 0.4;
 		  perlinBase = perlinBase * 0.9 + pow3(perlinBase) * 0.4;
 
 	return clamp((perlinBase - 0.35) * 1.4 + 0.5, 0.0, 1.0);
