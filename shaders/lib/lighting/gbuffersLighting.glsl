@@ -6,6 +6,9 @@ uniform float endFlashIntensity;
 void gbuffersLighting(in vec4 color, inout vec4 albedo, in vec3 screenPos, in vec3 viewPos, in vec3 worldPos, in vec3 newNormal, inout vec3 shadow, in vec2 lightmap, 
                       in float NoU, in float NoL, in float NoE,
                       in float subsurface, in float emission, in float smoothness, in float metalness, in float f0, in float parallaxShadow) {
+    //Metalness hotfix
+    metalness = clamp(metalness, 0.0, 0.85);
+
     //Variables
     float originalNoL = NoL;
     float lViewPos = length(viewPos.xz);
@@ -206,12 +209,10 @@ void gbuffersLighting(in vec4 color, inout vec4 albedo, in vec3 screenPos, in ve
     if (emission < 0.01) {
         float smoothnessF = 0.10 + lAlbedo * 0.15;
         #ifdef END
-                smoothness -= 0.10;
+              smoothness -= 0.10;
         #endif
-                smoothnessF = fmix(smoothnessF, 1.0, smoothness);
+              smoothnessF = fmix(smoothnessF, 1.0, smoothness);
 
-        // LabPBR: use f0 and metalness that were passed in
-        // (falls back to synthetic f0 = 0.5/metalness when using generated PBR)
         float effectiveF0 = (f0 > 0.0) ? f0 : (metalness > 0.5 ? 1.0 : 0.5);
 
         #ifdef OVERWORLD
@@ -226,7 +227,13 @@ void gbuffersLighting(in vec4 color, inout vec4 albedo, in vec3 screenPos, in ve
         );
         #endif
 
-        specularHighlight = max(specularHighlight * 0.5, vec3(0.0));
+        // Metalness hotfix
+        if (metalness > 0.5) {
+            specularHighlight = max(specularHighlight * 0.5, vec3(0.0));
+        } else {
+            specularHighlight = max(specularHighlight * 1.1, vec3(0.0));
+            specularHighlight *= albedo.rgb;
+        }
     }
     #endif
 
