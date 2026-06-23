@@ -18,7 +18,7 @@ uniform int frameCounter;
 uniform int moonPhase;
 #endif
 
-uniform int worldDay, worldTime;
+uniform int worldDay;
 
 uniform float frameTimeCounter;
 uniform float far, near;

@@ -12,7 +12,6 @@ in vec2 texCoord;
 
 // Uniforms //
 uniform int isEyeInWater;
-uniform int worldTime;
 
 uniform float cloudHeight;
 uniform float wetness;

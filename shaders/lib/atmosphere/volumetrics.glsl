@@ -156,7 +156,7 @@ void computeVolumetricLight(inout vec3 vl, in vec3 translucent, in float dither)
 
         float cloudTop = height + thickness * scale;
 
-        float time = (worldTime + int(5 + mod(worldDay, 100)) * 24000) * 0.05;
+        float time = (timeAngle + float(worldDay % 100 + 5)) * 1200.0;
         vec2 wind = vec2(time * speed * 0.005, sin(time * speed * 0.1) * 0.01) * speed * 0.05;
         #endif
 

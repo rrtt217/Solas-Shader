@@ -16,7 +16,7 @@ uniform int frameCounter;
 uniform int isEyeInWater;
 
 #if defined VL && defined VC_SHADOWS
-uniform int worldDay, worldTime;
+uniform int worldDay;
 #endif
 
 uniform float shadowFade;

@@ -171,7 +171,7 @@ void gbuffersLighting(in vec4 color, inout vec4 albedo, in vec3 screenPos, in ve
     shadow = fmix(fakeShadow, realShadow, vec3(shadowVisibility));
     #endif
 
-    float time = (worldTime + int(5 + mod(worldDay, 100)) * 24000) * 0.05;
+    float time = (timeAngle + float(worldDay % 100 + 5)) * 1200.0;
 
     //Cloud Shadows
     float cloudShadow = 1.0;

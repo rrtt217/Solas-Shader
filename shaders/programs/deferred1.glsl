@@ -16,7 +16,6 @@ uniform int frameCounter;
 #ifdef OVERWORLD
 uniform int worldDay;
 uniform int moonPhase;
-uniform int worldTime;
 uniform float shadowFade;
 uniform float rainStrength;
 uniform float timeAngle, timeBrightness, wetness;

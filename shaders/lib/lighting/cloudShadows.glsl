@@ -1,6 +1,6 @@
 void getDynamicWeather(inout float speed, inout float amount, inout float thickness, inout float density, inout float height, inout float scale) {
 	#ifdef VC_DYNAMIC_WEATHER
-	float day = (worldDay * 24000 + worldTime) / 24000;
+	float day = float(worldDay) + timeAngle;
     float sinDay05 = sin(day * 0.5);
     float cosDay075 = cos(day * 0.75);
     float cosDay15 = cos(day * 1.5);

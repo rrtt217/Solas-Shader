@@ -7,7 +7,7 @@ float texture2DShadow(sampler2D shadowtex, vec3 shadowPos) {
 #ifdef VOLUMETRIC_CLOUDS
 void getDynamicWeather(inout float speed, inout float amount, inout float thickness, inout float density, inout float detail, inout float height, inout float scale) {
 	#ifdef VC_DYNAMIC_WEATHER
-	float day = (worldDay * 24000 + worldTime) / 24000;
+	float day = float(worldDay) + timeAngle;
     float sinDay05 = sin(day * 0.5);
     float cosDay075 = cos(day * 0.75);
     float cosDay15 = cos(day * 1.5);
@@ -253,7 +253,7 @@ void computeVolumetricClouds(inout vec4 vc, in vec3 atmosphereColor, float z, fl
             vec3 rayPos = startPos + rayIncrement * dither;
             float sampleTotalLength = nearestPlane + rayLength * dither;
 
-            float time = (worldTime + int(5 + mod(worldDay, 100)) * 24000) * 0.05;
+            float time = (timeAngle + float(worldDay % 100 + 5)) * 1200.0;
             vec2 wind = vec2(time * speed * 0.005, sin(time * speed * 0.1) * 0.01) * speed * 0.05;
 
             float cloud = 0.0;

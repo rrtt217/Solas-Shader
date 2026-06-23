@@ -21,7 +21,7 @@ uniform int dhRenderDistance, vxRenderDistance;
 uniform int isEyeInWater;
 uniform int frameCounter;
 uniform int moonPhase;
-uniform int worldDay, worldTime;
+uniform int worldDay;
 
 uniform float frameTimeCounter;
 uniform float far, near;
