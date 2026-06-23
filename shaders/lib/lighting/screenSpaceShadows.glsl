@@ -8,8 +8,11 @@ vec3 computeScreenSpaceShadows(vec3 viewPos, vec3 lightVector, sampler2D depthte
 	float zDelta = 0.0;
 	float thickness = 4.0;
 
-	for (int i = 0; i < 16; i++) {
-		float traceStep = exp2((i + dither) * 0.5 - 2.0);
+	float traceStep = exp2(dither * 0.5 - 2.0);
+
+	for (int i = 0; i < 16; i++, traceStep *= 1.41421356237) {
+		if (shadow < 0.001) break;
+
 		vec3 tracePos = viewPos + lightVector * traceStep;
 
 		vec4 pos = projection * vec4(tracePos, 1.0);

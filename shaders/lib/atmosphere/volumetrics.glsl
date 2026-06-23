@@ -67,6 +67,17 @@ void calculateVLParameters(inout float intensity, inout float distanceFactor, in
 void computeVolumetricLight(inout vec3 vl, in vec3 translucent, in float dither) {
 	//Depths
 	float z0 = texture2D(depthtex0, texCoord).r;
+
+    float totalVisibility = float(z0 > 0.56) * float(isEyeInWater != 2);
+
+	#if MC_VERSION >= 11900
+	totalVisibility *= 1.0 - darknessFactor;
+	#endif
+
+	totalVisibility *= 1.0 - blindFactor;
+
+    if (totalVisibility <= 0.0) return;
+
 	float z1 = texture2D(depthtex1, texCoord).r;
 	float linearZ0 = getLinearDepth(z0, gbufferProjectionInverse);
 	float linearZ1 = getLinearDepth(z1, gbufferProjectionInverse);
@@ -107,14 +118,6 @@ void computeVolumetricLight(inout vec3 vl, in vec3 translucent, in float dither)
     float VoU = dot(nViewPos, upVec);
     #endif
 
-    float totalVisibility = float(z0 > 0.56) * float(isEyeInWater != 2);
-
-	#if MC_VERSION >= 11900
-	totalVisibility *= 1.0 - darknessFactor;
-	#endif
-
-	totalVisibility *= 1.0 - blindFactor;
-
     //Volumetric Lighting Variables
     float vlIntensity = 0.0;
 
@@ -154,7 +157,7 @@ void computeVolumetricLight(inout vec3 vl, in vec3 translucent, in float dither)
 
         getDynamicWeather(speed, amount, thickness, density, height, scale);
 
-        float cloudTop = height + thickness * scale;
+        float cloudTop = height + thickness * scale * 1.18;
 
         float time = (timeAngle + float(worldDay % 100 + 5)) * 1200.0;
         vec2 wind = vec2(time * speed * 0.005, sin(time * speed * 0.1) * 0.01) * speed * 0.05;
@@ -186,9 +189,9 @@ void computeVolumetricLight(inout vec3 vl, in vec3 translucent, in float dither)
         #endif
 
         //Ray marching
-        for (int i = 0; i < sampleCount; i++) {
-            float currentDist = exp2(i + dither);
+        float currentDist = exp2(dither);
 
+        for (int i = 0; i < sampleCount; i++, currentDist *= 2.0) {
             if (isRayMarcherHit(currentDist, maxDist, linearZ0, linearZ1, translucent)) break;
 
             vec3 sampleWorldPos = nWorldPos * currentDist;
@@ -232,7 +235,7 @@ void computeVolumetricLight(inout vec3 vl, in vec3 translucent, in float dither)
                 //Crepuscular rays
                 #ifdef VC_SHADOWS
                 if (rayPos.y < cloudTop) {
-                     vec3 cloudShadowPos = rayPos + (worldLightVec / max(abs(worldLightVec.y), 0.0)) * max(cloudTop - rayPos.y, 0.0);
+                     vec3 cloudShadowPos = rayPos + (worldLightVec / max(abs(worldLightVec.y), 0.05)) * max(cloudTop - rayPos.y, 0.0);
 
                     float noise = 0.0;
                     getCloudShadow(cloudShadowPos.xz / scale, wind, amount, density, noise);

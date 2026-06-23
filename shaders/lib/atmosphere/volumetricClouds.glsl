@@ -261,17 +261,11 @@ void computeVolumetricClouds(inout vec4 vc, in vec3 atmosphereColor, float z, fl
             float cloudLighting = 0.0;
 			float ambientLighting = 0.0;
 
-            float VoU = dot(nViewPos, upVec);
             float VoL = dot(nViewPos, lightVec);
-            float VoS = dot(nViewPos, sunVec);
 
             float halfVoL = fmix(abs(VoL) * 0.8, VoL, shadowFade) * 0.5 + 0.5;
             float halfVoLSqr = halfVoL * halfVoL;
-            float halfVol4 = halfVoLSqr * halfVoLSqr;
             float scattering = pow8(halfVoL);
-
-            float viewLengthSoftMin = lViewPos - rayLength * 0.5;
-            float viewLengthSoftMax = lViewPos + rayLength * 0.5;
 
             float distanceFade = 1.0;
             float fadeStart = 32.0 / max(FOG_DENSITY, 0.5);
@@ -306,7 +300,9 @@ void computeVolumetricClouds(inout vec4 vc, in vec3 atmosphereColor, float z, fl
                 float attenuation = step(cloudBottom, rayPos.y) * step(rayPos.y, cloudTop);
 
                 float noise = CloudSample(cloudCoord, wind, sampleAltitude, thickness, amount, density);
-                      noise *= attenuation;
+                      noise *= attenuation * step(xzNormalizedDistance, fadeEnd);
+
+                if (noise <= 0.0001) continue;
 
 				float sampleAltitudeL = InvLerp(rayPos.y + worldLightVec.y, cloudBottom, cloudTop);
                 float attenuationL = step(cloudBottom, rayPos.y + worldLightVec.y) * step(rayPos.y + worldLightVec.y, cloudTop);
@@ -318,8 +314,6 @@ void computeVolumetricClouds(inout vec4 vc, in vec3 atmosphereColor, float z, fl
 				float lightTransmittance = exp(-lightingNoise * (4.0 - timeBrightness)) * (1.0 + scattering * scattering);
 				float sampleLighting1 = clamp(powder * lightTransmittance, 0.0, 1.0);
                 float sampleLighting2 = clamp(sampleAltitude * (2.0 + lightTransmittance * 2.0 - scattering * scattering), 0.0, 1.0);
-
-                noise *= step(xzNormalizedDistance, fadeEnd);
 
                 cloudLighting = fmix(cloudLighting, sampleLighting1, noise * (1.0 - cloud * cloud));
 				ambientLighting = fmix(ambientLighting, sampleLighting2, noise * (1.0 - cloud * cloud));
