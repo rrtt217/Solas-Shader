@@ -147,7 +147,7 @@ vec3 ToWorldVoxy(vec3 viewPos) {
 #include "/lib/util/ToWorld.glsl"
 #include "/lib/color/lightColor.glsl"
 
-#ifdef SSAO
+#if defined SSAO || defined SS_SHADOWS
 #include "/lib/lighting/ambientOcclusion.glsl"
 #endif
 
