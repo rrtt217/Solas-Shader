@@ -7,7 +7,7 @@ vec2 getParallaxCoord(vec2 texCoord, float parallaxFade, out float surfaceDepth)
     vec2 coord = vTexCoord.st;
     surfaceDepth = 1.0;
 
-    if (viewVector != viewVector || parallaxFade >= 1.0) {
+    if (viewVector != viewVector) {
         return texCoord;
     }
 
@@ -24,7 +24,7 @@ vec2 getParallaxCoord(vec2 texCoord, float parallaxFade, out float surfaceDepth)
 
     vec3 normalMap = readNormal(coord).xyz * 2.0 - 1.0;
     float normalCheck = normalMap.x + normalMap.y;
-    if (normalCheck < -1.999) return texCoord;
+    if (parallaxFade >= 1.0 || normalCheck < -1.999) return texCoord;
 
     float depth = readNormal(coord).a;
 

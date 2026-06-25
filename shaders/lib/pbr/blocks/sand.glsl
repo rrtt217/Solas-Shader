@@ -1,3 +1,3 @@
 else if (material2 == 300) {// Sand
-    smoothness = pow7(albedo.b) ;
+    smoothness = pow7(albedo.b) * 0.5;
 }
