@@ -1,4 +1,6 @@
 #define VOXY_OPAQUE
+#define texture2D texture
+#define texture2DLod textureLod
 
 #include "/lib/common.glsl"
 

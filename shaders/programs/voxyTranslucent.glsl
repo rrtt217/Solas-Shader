@@ -1,4 +1,6 @@
 #define VOXY_TRANSLUCENT
+#define texture2D texture
+#define texture2DLod textureLod
 
 #include "/lib/common.glsl"
 
