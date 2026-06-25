@@ -270,7 +270,7 @@ const float sunPathRotation = 180.0;
 // Stars //
 #define STARS
 #define STAR_BRIGHTNESS 1.2 //[0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
-#define STAR_AMOUNT 1.60 //[0.75 0.80 0.85 0.90 0.95 1.00 1.05 1.10 1.15 1.20 1.25 1.30 1.35 1.40 1.45 1.50 1.55 1.60 1.65 1.70 1.75.]
+#define STAR_AMOUNT 1.60 //[0.75 0.80 0.85 0.90 0.95 1.00 1.05 1.10 1.15 1.20 1.25 1.30 1.35 1.40 1.45 1.50 1.55 1.60 1.65 1.70 1.75]
 #define STAR_SIZE 1.00 //[0.25 0.35 0.50 0.65 0.80 1.00 1.25 1.50 1.75 2.00 2.50 3.00 3.50 4.00 5.00 6.00]
 
 // Shooting Stars //
@@ -330,7 +330,7 @@ const float sunPathRotation = 180.0;
 #define NETHER_SMOKE_SPEED 2.00 //[1.00 1.50 2.00 2.50 3.00 3.50 4.00 4.50 5.00 5.50 6.00 6.50 7.00 7.50 8.00]
 
 // End Flashes //
-//#define END_FLASHES
+#define END_FLASHES
 #define END_FLASH_BRIGHTNESS 1.25 //[0.25 0.50 0.75 1.00 1.25 1.50 1.75 2.00 2.25 2.50 2.75 3.00 3.25 3.50 3.75 4.00]
 
 // Bloom //
