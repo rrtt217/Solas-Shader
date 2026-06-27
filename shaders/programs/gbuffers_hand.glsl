@@ -9,8 +9,16 @@ in vec4 color;
 in vec3 normal;
 in vec2 texCoord, lmCoord;
 
+#ifdef PBR
+in float dist;
+in vec3 binormal, tangent;
+in vec3 viewVector;
+in vec4 vTexCoord, vTexCoordAM;
+#endif
+
 // Uniforms //
 uniform int isEyeInWater;
+uniform int currentRenderedItemId;
 uniform int frameCounter;
 
 #ifdef AURORA_LIGHTING_INFLUENCE
@@ -39,6 +47,10 @@ uniform float isPaleGarden;
 uniform vec3 skyColor;
 #endif
 
+#ifdef PBR
+uniform ivec2 atlasSize;
+#endif
+
 uniform ivec2 eyeBrightnessSmooth;
 uniform vec3 cameraPosition;
 
@@ -49,6 +61,11 @@ uniform vec3 fogColor;
 uniform vec4 lightningBoltPosition;
 
 uniform sampler2D tex, noisetex;
+
+#ifdef PBR
+uniform sampler2D specular;
+uniform sampler2D normals;
+#endif
 
 #ifdef VX_SUPPORT
 uniform sampler3D floodfillSampler, floodfillSamplerCopy;
@@ -85,7 +102,13 @@ float moonVisibility = clamp((dot(-sunVec, upVec) + 0.15) * 3.0, 0.0, 1.0);
 vec3 lightVec = sunVec * ((timeAngle < 0.5325 || timeAngle > 0.9675) ? 1.0 : -1.0);
 #endif
 
+#ifdef PBR
+vec2 dcdx = dFdx(texCoord);
+vec2 dcdy = dFdy(texCoord);
+#endif
+
 // Includes //
+#include "/lib/util/encode.glsl"
 #include "/lib/util/bayerDithering.glsl"
 #include "/lib/util/transformMacros.glsl"
 #include "/lib/util/ToNDC.glsl"
@@ -118,6 +141,14 @@ vec3 lightVec = sunVec * ((timeAngle < 0.5325 || timeAngle > 0.9675) ? 1.0 : -1.
 #include "/lib/pbr/generatedPBR.glsl"
 #endif
 
+#ifdef PBR
+#if defined PARALLAX || defined SELF_SHADOW
+#include "/lib/pbr/parallax.glsl"
+#endif
+#include "/lib/pbr/complexFresnel.glsl"
+#include "/lib/pbr/materialGbuffers.glsl"
+#endif
+
 // Main //
 void main() {
     vec4 albedo = texture2D(tex, texCoord) * color;
@@ -128,7 +159,19 @@ void main() {
     vec3 worldPos = ToWorld(viewPos);
 
     float subsurface = 0.0;
-    float emission = 0.0, smoothness = 0.0, metalness = 0.0, f0 = 0.0, ao = 0.0, porosity = 0.5, parallaxShadow = 0.0;
+    float emission = 0.0, smoothness = 0.0, metalness = 0.0, f0 = 0.0, ao = 1.0, porosity = 0.5, parallaxShadow = 0.0;
+    vec3 fresnel3 = vec3(0.0);
+
+    #ifdef PBR
+    vec2 newCoord = vTexCoord.st * vTexCoordAM.pq + vTexCoordAM.st;
+    mat3 tbnMatrix = mat3(tangent.x, binormal.x, normal.x,
+                          tangent.y, binormal.y, normal.y,
+                          tangent.z, binormal.z, normal.z);
+
+    getMaterials(smoothness, metalness, f0, emission, subsurface, porosity, ao, newNormal, newCoord, dcdx, dcdy, tbnMatrix);
+    fresnel3 = max(fresnel3, getPBRFresnel(albedo.rgb, newNormal, viewPos, smoothness, metalness, f0, ao));
+    albedo.rgb *= ao * ao;
+    #endif
 
 	float NoU = clamp(dot(newNormal, upVec), -1.0, 1.0);
     #if defined OVERWORLD
@@ -141,14 +184,46 @@ void main() {
 	float NoE = clamp(dot(newNormal, eastVec), -1.0, 1.0);
 
     #if (defined GENERATED_EMISSION || defined GENERATED_SPECULAR) && defined IS_IRIS
-    if (albedo.a > 0.1) generateIPBR(albedo, worldPos, viewPos, lightmap, emission, smoothness, metalness, subsurface);
+    if (albedo.a > 0.1) {
+        float generatedEmission = emission;
+        float generatedSmoothness = 0.0;
+        float generatedMetalness = 0.0;
+        float generatedSubsurface = subsurface;
+        generateIPBR(albedo, worldPos, viewPos, lightmap, generatedEmission, generatedSmoothness, generatedMetalness, generatedSubsurface);
+        #ifdef GENERATED_EMISSION
+        emission = max(emission, generatedEmission);
+        #endif
+        #ifdef GENERATED_SPECULAR
+        smoothness = max(smoothness, generatedSmoothness);
+        metalness = max(metalness, generatedMetalness);
+        #endif
+        subsurface = max(subsurface, generatedSubsurface);
+        if (smoothness > 0.01 && f0 <= 0.0) f0 = 0.04;
+    }
+    #endif
+
+    #ifdef GENERATED_SPECULAR
+    if (smoothness > 0.01) {
+        float generatedFresnel = pow(clamp(1.0 + dot(newNormal, normalize(viewPos)), 0.0, 1.0), 5.0);
+        vec3 generatedAlbedo = pow(max(albedo.rgb, vec3(0.0)), vec3(2.2));
+        vec3 generatedBase = mix(vec3(0.04), max(generatedAlbedo, vec3(0.04)), clamp(metalness, 0.0, 1.0));
+        fresnel3 = max(fresnel3, mix(generatedBase, vec3(1.0), generatedFresnel));
+    }
     #endif
 
     vec3 shadow = vec3(0.0);
     gbuffersLighting(color, albedo, screenPos, viewPos, worldPos, newNormal, shadow, lightmap, NoU, NoL, NoE, subsurface, emission, smoothness, metalness, f0, parallaxShadow);
 
+    #if defined PBR || defined GENERATED_SPECULAR
+    /* DRAWBUFFERS:0367 */
+    gl_FragData[0] = albedo;
+    gl_FragData[1] = vec4(clamp(smoothness, 0.0, 0.95), lightmap.y * 0.5, 0.25, 1.0);
+    gl_FragData[2] = vec4(encodeNormal(newNormal), float(gl_FragCoord.z < 1.0), 1.0);
+    gl_FragData[3] = vec4(fresnel3, 1.0);
+    #else
     /* DRAWBUFFERS:0 */
     gl_FragData[0] = albedo;
+    #endif
 }
 
 #endif
@@ -164,6 +239,19 @@ out vec4 color;
 out vec3 normal;
 out vec2 texCoord, lmCoord;
 
+#ifdef PBR
+out float dist;
+out vec3 binormal, tangent;
+out vec3 viewVector;
+out vec4 vTexCoord, vTexCoordAM;
+#endif
+
+// Attributes //
+#ifdef PBR
+attribute vec4 mc_midTexCoord;
+attribute vec4 at_tangent;
+#endif
+
 // Main //
 void main() {
 	texCoord = (gl_TextureMatrix[0] * gl_MultiTexCoord0).xy;
@@ -174,6 +262,24 @@ void main() {
     color = gl_Color;
 
     normal = normalize(gl_NormalMatrix * gl_Normal);
+
+    #ifdef PBR
+    binormal = normalize(gl_NormalMatrix * cross(at_tangent.xyz, gl_Normal.xyz) * at_tangent.w);
+    tangent = normalize(gl_NormalMatrix * at_tangent.xyz);
+
+    mat3 tbnMatrix = mat3(tangent.x, binormal.x, normal.x,
+                          tangent.y, binormal.y, normal.y,
+                          tangent.z, binormal.z, normal.z);
+
+    dist = length(gl_ModelViewMatrix * gl_Vertex);
+    viewVector = tbnMatrix * (gl_ModelViewMatrix * gl_Vertex).xyz;
+
+    vec2 midCoord = (gl_TextureMatrix[0] * mc_midTexCoord).st;
+    vec2 texMinMidCoord = texCoord - midCoord;
+    vTexCoordAM.pq = abs(texMinMidCoord) * 2.0;
+    vTexCoordAM.st = min(texCoord, midCoord - texMinMidCoord);
+    vTexCoord.xy = sign(texMinMidCoord) * 0.5 + 0.5;
+    #endif
 
 	gl_Position = ftransform();
 }

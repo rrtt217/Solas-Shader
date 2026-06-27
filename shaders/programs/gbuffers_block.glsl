@@ -9,6 +9,13 @@ in vec4 color;
 in vec3 normal;
 in vec2 texCoord, lmCoord;
 
+#ifdef PBR
+in float dist;
+in vec3 binormal, tangent;
+in vec3 viewVector;
+in vec4 vTexCoord, vTexCoordAM;
+#endif
+
 // Uniforms //
 uniform int isEyeInWater;
 uniform int frameCounter;
@@ -39,6 +46,10 @@ uniform float isPaleGarden;
 
 uniform vec3 skyColor;
 #endif
+#ifdef PBR
+uniform ivec2 atlasSize;
+#endif
+
 uniform ivec2 eyeBrightnessSmooth;
 uniform vec3 cameraPosition;
 
@@ -49,6 +60,11 @@ uniform vec3 fogColor;
 uniform vec4 lightningBoltPosition;
 
 uniform sampler2D tex, noisetex;
+
+#ifdef PBR
+uniform sampler2D specular;
+uniform sampler2D normals;
+#endif
 
 #ifdef VX_SUPPORT
 uniform sampler3D floodfillSampler, floodfillSamplerCopy;
@@ -85,6 +101,11 @@ float moonVisibility = clamp((dot(-sunVec, upVec) + 0.15) * 3.0, 0.0, 1.0);
 vec3 lightVec = sunVec * ((timeAngle < 0.5325 || timeAngle > 0.9675) ? 1.0 : -1.0);
 #endif
 
+#ifdef PBR
+vec2 dcdx = dFdx(texCoord);
+vec2 dcdy = dFdy(texCoord);
+#endif
+
 // Includes //
 #include "/lib/util/encode.glsl"
 #include "/lib/util/bayerDithering.glsl"
@@ -116,6 +137,14 @@ vec3 lightVec = sunVec * ((timeAngle < 0.5325 || timeAngle > 0.9675) ? 1.0 : -1.
 
 #include "/lib/lighting/gbuffersLighting.glsl"
 
+#ifdef PBR
+#if defined PARALLAX || defined SELF_SHADOW
+#include "/lib/pbr/parallax.glsl"
+#endif
+#include "/lib/pbr/complexFresnel.glsl"
+#include "/lib/pbr/materialGbuffers.glsl"
+#endif
+
 void sampleNebulaNoise(vec2 coord, inout float colorMixer, inout float noise) {
     colorMixer = texture2D(noisetex, coord * 0.25).r;
     noise = texture2D(noisetex, coord * 0.50).r;
@@ -135,7 +164,21 @@ void main() {
     vec3 worldPos = ToWorld(viewPos);
 
     float subsurface = 0.0;
-    float emission = 0.0;
+    float emission = 0.0, smoothness = 0.0, metalness = 0.0, f0 = 0.0, ao = 1.0, porosity = 0.5, parallaxShadow = 0.0;
+    vec3 fresnel3 = vec3(0.0);
+
+    #ifdef PBR
+    vec2 newCoord = vTexCoord.st * vTexCoordAM.pq + vTexCoordAM.st;
+    mat3 tbnMatrix = mat3(tangent.x, binormal.x, normal.x,
+                          tangent.y, binormal.y, normal.y,
+                          tangent.z, binormal.z, normal.z);
+
+    if (blockEntityId != 9999) {
+        getMaterials(smoothness, metalness, f0, emission, subsurface, porosity, ao, newNormal, newCoord, dcdx, dcdy, tbnMatrix);
+        fresnel3 = max(fresnel3, getPBRFresnel(albedo.rgb, newNormal, viewPos, smoothness, metalness, f0, ao));
+        albedo.rgb *= ao * ao;
+    }
+    #endif
 
     float NoU = clamp(dot(newNormal, upVec), -1.0, 1.0);
     #if defined OVERWORLD
@@ -211,12 +254,20 @@ void main() {
         }
     } else {
         vec3 shadow = vec3(0.0);
-        gbuffersLighting(color, albedo, screenPos, viewPos, worldPos, newNormal, shadow, lightmap, NoU, NoL, NoE, subsurface, emission, 0.0, 0.0, 0.0, 0.0);
+        gbuffersLighting(color, albedo, screenPos, viewPos, worldPos, newNormal, shadow, lightmap, NoU, NoL, NoE, subsurface, emission, smoothness, metalness, f0, parallaxShadow);
     }
 
+    #if defined PBR
+	/* DRAWBUFFERS:0367 */
+	gl_FragData[0] = albedo;
+	gl_FragData[1] = vec4(clamp(smoothness, 0.0, 0.95), lightmap.y * 0.5, 0.0, 1.0);
+    gl_FragData[2] = vec4(encodeNormal(newNormal), float(gl_FragCoord.z < 1.0), 1.0);
+    gl_FragData[3] = vec4(fresnel3, 1.0);
+    #else
 	/* DRAWBUFFERS:03 */
 	gl_FragData[0] = albedo;
-	gl_FragData[1] = vec4(encodeNormal(newNormal), 0.0, 1.0);
+	gl_FragData[1] = vec4(0.0, 0.0, 0.0, 1.0);
+    #endif
 }
 
 #endif
@@ -231,6 +282,19 @@ void main() {
 out vec4 color;
 out vec3 normal;
 out vec2 texCoord, lmCoord;
+
+#ifdef PBR
+out float dist;
+out vec3 binormal, tangent;
+out vec3 viewVector;
+out vec4 vTexCoord, vTexCoordAM;
+#endif
+
+// Attributes //
+#ifdef PBR
+attribute vec4 mc_midTexCoord;
+attribute vec4 at_tangent;
+#endif
 
 // Uniforms //
 #ifdef TAA
@@ -255,6 +319,24 @@ void main() {
     color = gl_Color;
 
     normal = normalize(gl_NormalMatrix * gl_Normal);
+
+    #ifdef PBR
+    binormal = normalize(gl_NormalMatrix * cross(at_tangent.xyz, gl_Normal.xyz) * at_tangent.w);
+    tangent = normalize(gl_NormalMatrix * at_tangent.xyz);
+
+    mat3 tbnMatrix = mat3(tangent.x, binormal.x, normal.x,
+                          tangent.y, binormal.y, normal.y,
+                          tangent.z, binormal.z, normal.z);
+
+    dist = length(gl_ModelViewMatrix * gl_Vertex);
+    viewVector = tbnMatrix * (gl_ModelViewMatrix * gl_Vertex).xyz;
+
+    vec2 midCoord = (gl_TextureMatrix[0] * mc_midTexCoord).st;
+    vec2 texMinMidCoord = texCoord - midCoord;
+    vTexCoordAM.pq = abs(texMinMidCoord) * 2.0;
+    vTexCoordAM.st = min(texCoord, midCoord - texMinMidCoord);
+    vTexCoord.xy = sign(texMinMidCoord) * 0.5 + 0.5;
+    #endif
 
 	//Position
 	vec4 position = gbufferModelViewInverse * gl_ModelViewMatrix * gl_Vertex;

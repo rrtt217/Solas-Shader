@@ -144,7 +144,7 @@ void generateIPBR(inout vec4 albedo, in vec3 worldPos, in vec3 viewPos, inout ve
 void generateIPBR(inout vec4 albedo, in vec3 worldPos, in vec3 viewPos, inout vec2 lightmap, inout float emission, inout float smoothness, inout float metalness, inout float subsurface) {
     float lAlbedo = clamp(length(albedo.rgb), 0.0, 1.0);
 
-    //#include "/lib/pbr/hand/metals.glsl"
+    #include "/lib/pbr/hand/metals.glsl"
     #include "/lib/pbr/items/amethyst.glsl"
     #include "/lib/pbr/items/brewing_stand.glsl"
     #include "/lib/pbr/items/chorus.glsl"

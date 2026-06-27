@@ -244,7 +244,7 @@ void main() {
 		#endif
 
 		float fresnel = clamp(1.0 + dot(normalize(normal), nViewPos), 0.0, 1.0) * snellWindow;
-		getReflection(albedo, viewPos, worldPos, nViewPos, newNormal, fresnel, lightmap.y);
+		getReflection(albedo, viewPos, newNormal, fresnel, lightmap.y);
 		albedo.a = fmix(albedo.a * snellWindow, 1.0, fresnel);
 	}
 	#endif

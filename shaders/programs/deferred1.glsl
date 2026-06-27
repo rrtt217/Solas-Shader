@@ -58,22 +58,30 @@ uniform vec3 fogColor;
 uniform vec4 lightningBoltPosition;
 #endif
 
-#ifdef VOXY
+#if defined VOXY || defined PBR || defined GENERATED_SPECULAR
 uniform sampler2D colortex7;
 #endif
 
 uniform sampler2D colortex0;
 uniform sampler2D depthtex0;
 
+#if defined PBR || defined GENERATED_SPECULAR
+uniform sampler2D depthtex1;
+uniform sampler2D colortex6;
+#endif
+
 #ifdef DISTANT_HORIZONS
 uniform sampler2D dhDepthTex0;
+#if defined PBR || defined GENERATED_SPECULAR
+uniform sampler2D dhDepthTex1;
+#endif
 #endif
 
 #ifdef VOXY
 uniform sampler2D vxDepthTexOpaque, vxDepthTexTrans;
 #endif
 
-#ifdef SS_SHADOWS
+#if defined SS_SHADOWS || defined PBR || defined GENERATED_SPECULAR
 uniform sampler2D colortex3;
 #endif
 
@@ -97,6 +105,7 @@ uniform mat4 gbufferModelViewInverse;
 uniform mat4 gbufferProjection;
 uniform mat4 gbufferProjectionInverse;
 
+
 #ifdef DISTANT_HORIZONS
 uniform mat4 dhProjection, dhProjectionInverse;
 #endif
@@ -108,6 +117,10 @@ uniform mat4 vxProj, vxProjInv, vxModelViewInv;
 // Pipeline Options //
 const bool colortex4Clear = false;
 const bool colortex5Clear = false;
+#if defined PBR || defined GENERATED_SPECULAR
+const bool colortex0MipmapEnabled = true;
+const bool colortex6MipmapEnabled = true;
+#endif
 
 // Global Variables //
 #if defined OVERWORLD
@@ -173,6 +186,12 @@ vec3 ToWorldVoxy(vec3 viewPos) {
 
 #include "/lib/atmosphere/skyEffects.glsl"
 #include "/lib/atmosphere/fog.glsl"
+
+#if defined PBR || defined GENERATED_SPECULAR
+#include "/lib/util/encode.glsl"
+#include "/lib/pbr/raytracer.glsl"
+#include "/lib/pbr/simpleReflection.glsl"
+#endif
 
 // Main //
 void main() {
@@ -300,6 +319,27 @@ void main() {
 
 	#if MC_VERSION >= 11900
 		skyColor *= 1.0 - darknessFactor;
+	#endif
+
+
+	#if defined PBR || defined GENERATED_SPECULAR
+	if (z0 < 1.0) {
+		vec3 specularData = texture2D(colortex3, texCoord).rgb;
+		vec4 normalData = texture2D(colortex6, texCoord);
+
+		float smoothness = specularData.r;
+		#ifdef PBR
+			smoothness *= smoothness;
+			smoothness /= 2.0 - smoothness;
+		#endif
+
+		if (smoothness > 0.001 && normalData.b > 0.001) {
+			float skyLightMap = specularData.g * 2.0;
+			vec3 pbrNormal = decodeNormal(normalData.rg);
+			vec3 fresnel3 = texture2D(colortex7, texCoord).rgb * smoothness;
+			getReflection(color, viewPos.xyz, pbrNormal, fresnel3, smoothness, skyLightMap);
+		}
+	}
 	#endif
 
 	#if defined DISTANT_HORIZONS

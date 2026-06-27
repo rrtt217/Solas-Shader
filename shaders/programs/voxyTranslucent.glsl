@@ -170,7 +170,7 @@ void voxy_emitFragment(VoxyFragmentParameters parameters) {
 		#endif
 
 		float fresnel = clamp(1.0 + dot(normalize(newNormal), nViewPos), 0.0, 1.0) * snellWindow;
-		getReflection(albedo, viewPos, worldPos, nViewPos, newNormal, fresnel, lightmap.y);
+		getReflection(albedo, viewPos, newNormal, fresnel, lightmap.y);
 		albedo.a = fmix(albedo.a * snellWindow, 1.0, fresnel);
 	}
 	#endif
@@ -183,7 +183,7 @@ void voxy_emitFragment(VoxyFragmentParameters parameters) {
 
 		float smoothnessF = 0.6 + length(albedo.rgb) * 0.2 * float(ice > 0.5 || water > 0.5);
         // Water: dielectric, F0 ~ 0.02 (IOR 1.33), no metalness
-        float waterF0 = 0.5; // encoded: sqrt(0.02/0.08) ≈ 0.5
+        float waterF0 = 0.02;
 
 		#ifdef OVERWORLD
 		vec3 specularHighlight = getSpecularHighlight(newNormal, viewPos, smoothnessF, 0.0,

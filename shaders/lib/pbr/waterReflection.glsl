@@ -1,4 +1,4 @@
-void getReflection(inout vec4 albedo, in vec3 viewPos, in vec3 worldPos, in vec3 nViewPos, in vec3 newNormal, in float fresnel, in float skyLightMap) {
+void getReflection(inout vec4 albedo, in vec3 viewPos, in vec3 newNormal, in float fresnel, in float skyLightMap) {
 	float dither = Bayer8(gl_FragCoord.xy);
 
 	#ifdef TAA
@@ -6,19 +6,25 @@ void getReflection(inout vec4 albedo, in vec3 viewPos, in vec3 worldPos, in vec3
 	#endif
 
     float border = 0.0;
-    float lRfragPos = 0.0;
-    float dist = 0.0;
     vec2 cdist = vec2(0.0);
 
-    vec3 reflectPos = Raytrace(depthtex1, viewPos, newNormal, dither, fresnel, 6, 1.0, 0.1, 1.6, 10, border, lRfragPos, dist, cdist);
+    vec3 reflectPos = Raytrace(depthtex1, viewPos, newNormal, dither, 6, 1.0, 0.1, 1.6, border, cdist);
 
-	float zThreshold = 1.0 + 1e-5;
-	vec4 reflection = vec4(0);
-	if (reflectPos.z < zThreshold) {
+	float zThreshold = 1.0;
+
+	float borderFade = clamp(13.333 * (1.0 - border), 0.0, 1.0);
+	vec2 edgeFactor = pow4(cdist);
+	float screenFade = pow(max((1.0 - edgeFactor.x) * (1.0 - edgeFactor.y), 0.0), 2.0);
+	borderFade *= screenFade;
+
+	vec4 reflection = vec4(0.0);
+	if (reflectPos.z < zThreshold && borderFade > 0.001 &&
+		reflectPos.x > 0.0 && reflectPos.x < 1.0 &&
+		reflectPos.y > 0.0 && reflectPos.y < 1.0) {
 		reflection = texture(gaux1, reflectPos.xy);
-		reflection.rgb = pow8(reflection.rgb) * 256.0;
+		reflection.rgb = min(pow8(reflection.rgb) * 256.0, vec3(4.0));
 		reflection.rgb *= float(reflection.a > 0.0);
-		reflection.a *= border;
+		reflection.a *= borderFade;
 	}
 
 	#ifdef OVERWORLD
@@ -36,7 +42,14 @@ void getReflection(inout vec4 albedo, in vec3 viewPos, in vec3 worldPos, in vec3
 			vec3 worldPosRef = ToWorld(viewPosRef);
             float atmosphereHardMixFactor = 0.0;
 			vec3 reflectedAtmosphere = getAtmosphere(viewPosRef.xyz, worldPosRef.xyz, atmosphereHardMixFactor);
-			falloff = mix(falloff, reflectedAtmosphere, skyLightMap);
+
+			float waterSkyOcclusion = skyLightMap;
+			#if REFLECTION_SKY_FALLOFF > 1
+			waterSkyOcclusion = clamp(1.0 - (1.0 - waterSkyOcclusion) * REFLECTION_SKY_FALLOFF, 0.0, 1.0);
+			#endif
+			waterSkyOcclusion *= waterSkyOcclusion;
+
+			falloff = mix(falloff, reflectedAtmosphere, waterSkyOcclusion);
 			#endif
 		}
 

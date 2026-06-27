@@ -27,11 +27,13 @@ const float wetnessHalflife = 300.0;
 const float eyeBrightnessHalflife = 5.0;
 
 /*
-const int colortex0Format = R11F_G11F_B10F; //GB scene
-const int colortex1Format = RGB16F; //Final scene
-const int colortex3Format = RGBA16; //PBR data
-const int colortex4Format = RGB16F; //Reflections
-const int colortex7Format = RGBA16; //Voxy transparent color
+const int colortex0Format = R11F_G11F_B10F; //main scene
+const int colortex1Format = RGB8; //raw translucent, vl, bloom, final scene
+const int colortex2Format = RGBA16; //temporal data
+const int colortex3Format = RGBA16; //PBR scalar data, water refraction mask
+const int colortex4Format = RGB16F; //reflections / bloom history
+const int colortex6Format = RGBA16; //opaque normals and hit mask
+const int colortex7Format = RGBA16; //fresnel data
 */
 
 // Includes //

@@ -48,7 +48,7 @@ uniform float isPaleGarden;
 uniform vec3 skyColor;
 #endif
 
-#ifdef GENERATED_NORMALS
+#if defined GENERATED_NORMALS || defined PBR
 uniform ivec2 atlasSize;
 #endif
 
@@ -152,6 +152,7 @@ vec2 dcdy = dFdy(texCoord);
 #include "/lib/pbr/parallax.glsl"
 #endif
 
+#include "/lib/pbr/complexFresnel.glsl"
 #include "/lib/pbr/materialGbuffers.glsl"
 #endif
 
@@ -186,7 +187,8 @@ void main() {
 	float saplings = float(mat == 10317);
 	float foliage = float(mat >= 10304 && mat <= 10319 || mat >= 10035 && mat <= 10040) * (1.0 - leaves) * (1.0 - saplings);
 	float subsurface = leaves + foliage * 0.6 + saplings * 0.4;
-    float emission = 0.0, smoothness = 0.0, metalness = 0.0, f0 = 0.0, ao = 0.0, porosity = 0.5, parallaxShadow = 0.0;
+    float emission = 0.0, smoothness = 0.0, metalness = 0.0, f0 = 0.0, ao = 1.0, porosity = 0.5, parallaxShadow = 0.0;
+    vec3 fresnel3 = vec3(0.0);
 
 	#if defined GENERATED_NORMALS || defined PARALLAX || defined PBR || defined RAIN_PUDDLES
 	vec2 newCoord = vTexCoord.st * vTexCoordAM.pq + vTexCoordAM.st;
@@ -234,8 +236,22 @@ void main() {
 	float NoE = clamp(dot(newNormal, eastVec), -1.0, 1.0);
 
 	#if defined GENERATED_EMISSION || defined GENERATED_SPECULAR
-	generateIPBR(albedo, worldPos, viewPos, lightmap, NoU, emission, smoothness, metalness, subsurface, mat);
+	float generatedEmission = emission;
+	float generatedSmoothness = 0.0;
+	float generatedMetalness = 0.0;
+	float generatedSubsurface = subsurface;
+	generateIPBR(albedo, worldPos, viewPos, lightmap, NoU, generatedEmission, generatedSmoothness, generatedMetalness, generatedSubsurface, mat);
+	#ifdef GENERATED_EMISSION
+	emission = max(emission, generatedEmission);
 	#endif
+	#ifdef GENERATED_SPECULAR
+	smoothness = max(smoothness, generatedSmoothness);
+	metalness = max(metalness, generatedMetalness);
+	#endif
+	subsurface = max(subsurface, generatedSubsurface);
+	if (smoothness > 0.01 && f0 <= 0.0) f0 = 0.04;
+	#endif
+
 
 	#if defined RAIN_PUDDLES && (defined GENERATED_SPECULAR || defined PBR)
 	if (emission < 0.01 && foliage < 0.1 && isSnowy < 0.1) {
@@ -256,10 +272,23 @@ void main() {
 	}
 	#endif
 
+    #ifdef PBR
+    fresnel3 = max(fresnel3, getPBRFresnel(albedo.rgb, newNormal, viewPos, smoothness, metalness, f0, ao));
+    #endif
+
+    #ifdef GENERATED_SPECULAR
+    if (smoothness > 0.01) {
+        float generatedFresnel = pow(clamp(1.0 + dot(newNormal, normalize(viewPos)), 0.0, 1.0), 5.0);
+        vec3 generatedAlbedo = pow(max(albedo.rgb, vec3(0.0)), vec3(2.2));
+        vec3 generatedBase = mix(vec3(0.04), max(generatedAlbedo, vec3(0.04)), clamp(metalness, 0.0, 1.0));
+        fresnel3 = max(fresnel3, mix(generatedBase, vec3(1.0), generatedFresnel));
+    }
+    #endif
+
 	#ifdef PBR
 	vec3 rawAlbedo = albedo.rgb * 0.999 + 0.001;
 	albedo.rgb *= ao * ao;
-	albedo.rgb *= 1.0 - metalness * smoothness * 0.5;
+	albedo.rgb *= 1.0 - fresnel3 * smoothness * smoothness * (1.0 - metalness);
 
 	float doParallax = 0.0;
 
@@ -298,9 +327,17 @@ void main() {
     float VoL = clamp(dot(normalize(viewPos), sunVec), 0.0, 1.0);
     #endif
 
+    #if defined PBR || defined GENERATED_SPECULAR
+	/* DRAWBUFFERS:0367 */
+	gl_FragData[0] = albedo;
+	gl_FragData[1] = vec4(clamp(smoothness, 0.0, 0.95), lightmap.y * 0.5, 0.0, 1.0);
+    gl_FragData[2] = vec4(encodeNormal(newNormal), float(gl_FragCoord.z < 1.0), 1.0);
+    gl_FragData[3] = vec4(fresnel3, 1.0);
+    #else
 	/* DRAWBUFFERS:03 */
 	gl_FragData[0] = albedo;
-	gl_FragData[1] = vec4(encodeNormal(newNormal), lightmap.y * 0.5, clamp(fmix(smoothness, 1.0, metalness * metalness), 0.0, 0.95));
+	gl_FragData[1] = vec4(0.0, lightmap.y * 0.5, 0.0, 1.0);
+    #endif
 }
 
 #endif

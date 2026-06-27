@@ -272,7 +272,7 @@ void main() {
 		#endif
 
 		float fresnel = clamp(1.0 + dot(normalize(normal), nViewPos), 0.0, 1.0) * snellWindow;
-		getReflection(albedo, viewPos, worldPos, nViewPos, newNormal, fresnel, lightmap.y);
+		getReflection(albedo, viewPos, newNormal, fresnel, lightmap.y);
 		albedo.a = fmix(albedo.a * snellWindow, 1.0, fresnel);
 	}
 	#endif
@@ -283,19 +283,20 @@ void main() {
 		float vanillaDiffuse = (0.25 * NoU + 0.75) + (0.667 - abs(NoE)) * (1.0 - abs(NoU)) * 0.15;
 			    vanillaDiffuse *= vanillaDiffuse;
 
-		float smoothnessF = 0.6 + length(albedo.rgb) * 0.2 * float(ice > 0.5 || water > 0.5);
+		float smoothnessF = 0.82 + 0.08 * float(ice > 0.5 || water > 0.5);
 
-        float waterF0 = 0.5;
+        float waterF0 = 0.02;
 
 		#ifdef OVERWORLD
 		vec3 specularHighlight = getSpecularHighlight(newNormal, viewPos, smoothnessF, 0.0,
-            albedo.rgb, waterF0, lightColSqrt * (1.0 + timeBrightness * 4.0), shadow * vanillaDiffuse, color.a);
+            albedo.rgb, waterF0, lightColSqrt * (0.45 + timeBrightness * 1.65), shadow * vanillaDiffuse, color.a);
 		#else
 		vec3 specularHighlight = getSpecularHighlight(newNormal, viewPos, smoothnessF, 0.0,
-            albedo.rgb, waterF0, endLightCol * 0.5, shadow * vanillaDiffuse, color.a);
+            albedo.rgb, waterF0, endLightCol * 0.35, shadow * vanillaDiffuse, color.a);
 		#endif
 
-		albedo.rgb += specularHighlight;
+		specularHighlight = clamp(specularHighlight, vec3(0.0), vec3(1.0));
+		albedo.rgb += specularHighlight * mix(0.6, 1.0, clamp(albedo.a, 0.0, 1.0));
 	}
 	#endif
 

@@ -196,8 +196,19 @@ const float sunPathRotation = 180.0;
 #define NORMAL_STRENGTH 3.0 //[1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0]
 #define NORMAL_RESOLUTION 128.0 //[64.0 96.0 128.0 160.0 192.0]
 #define NORMAL_THRESHOLD 0.15 //[0.05 0.10 0.15 0.20 0.25]
-//#define PBR
+//#define ADVANCED_MATERIALS
 #define MATERIAL_FORMAT 1 //[0 1]
+#define REFLECTION 2 //[0 1 2]
+#define REFLECTION_MODE 1 //[0 1 2]
+#define SPECULAR_HIGHLIGHT 2 //[0 1 2]
+#define REFLECTION_LOD 1 //[0 1]
+#define REFLECTION_SKY_FALLOFF 1 //[1 2 4 8 16]
+#define REFLECTION_SPECULAR
+#define REFLECTION_ROUGH
+#define REFLECTION_RAIN
+#define REFLECTION_RAIN_AMOUNT 1.0 //[0.4 0.5 0.6 0.7 1.0]
+//#define SPECULAR_HIGHLIGHT_ROUGH
+//#define ALBEDO_METAL
 //#define PARALLAX
 #define PARALLAX_DEPTH 0.20 //[0.05 0.10 0.15 0.20 0.25 0.30 0.35 0.40 0.45 0.50]
 #define PARALLAX_QUALITY 64 //[32 48 64 80 96 112 128]
@@ -206,7 +217,8 @@ const float sunPathRotation = 180.0;
 #define SELF_SHADOW_ANGLE 3.0 //[0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0 4.5 5.0 5.5 6.0 6.5 7.0 7.5 8.0]
 #define SELF_SHADOW_QUALITY 6 //[4 6 8 10 12 14 16]
 #define SELF_SHADOW_STRENGTH 32 //[4 8 16 32 48 64]
-#define SPECULAR_HIGHLIGHTS
+#define NORMAL_DAMPENING
+#define NORMAL_PLANTS
 
 // Waving Blocks //
 #define WAVING_PLANTS
@@ -831,6 +843,23 @@ vec3 pow8(vec3 x) {return x*x*x*x*x*x*x*x;}
 #define VX_SUPPORT
 #endif
 
+#if defined MC_GL_VENDOR_INTEL || defined MC_GL_RENDERER_INTEL
+#undef VX_SUPPORT
+#endif
+
+#ifdef ADVANCED_MATERIALS
+#define PBR
+#endif
+
+#if SPECULAR_HIGHLIGHT > 0
+#define SPECULAR_HIGHLIGHTS
+#endif
+
+#ifndef REFLECTION_SPECULAR
+#undef REFLECTION_ROUGH
+#undef REFLECTION_RAIN
+#endif
+
 #ifndef IS_IRIS
 #undef EMISSIVE_ARMOR_TRIMS
 #endif
@@ -844,7 +873,6 @@ vec3 pow8(vec3 x) {return x*x*x*x*x*x*x*x;}
 #endif
 
 #ifdef PBR
-#undef GENERATED_SPECULAR
 #undef GENERATED_NORMALS
 #endif
 
@@ -881,13 +909,1165 @@ vec3 pow8(vec3 x) {return x*x*x*x*x*x*x*x;}
 #ifdef RAIN_PUDDLES
 #endif
 
+#ifdef RAIN_PUDDLES_STRENGTH
+#endif
+
+#ifdef WATER_REFLECTIONS
+#endif
+
+#ifdef WATER_NORMALS
+#endif
+
+#ifdef WATER_NORMAL_DETAIL
+#endif
+
+#ifdef WATER_NORMAL_BUMP
+#endif
+
+#ifdef WATER_NORMAL_OFFSET
+#endif
+
+#ifdef TEXTURED_FIRE_LAVA
+#endif
+
+#ifdef GENERATED_EMISSION
+#endif
+
+#ifdef EMISSION_STRENGTH
+#endif
+
+#ifdef EMISSIVE_ORES
+#endif
+
+#ifdef EMISSIVE_EMERALD_ORE
+#endif
+
+#ifdef EMISSIVE_DIAMOND_ORE
+#endif
+
+#ifdef EMISSIVE_LAPIS_ORE
+#endif
+
+#ifdef EMISSIVE_REDSTONE_ORE
+#endif
+
+#ifdef EMISSIVE_COPPER_ORE
+#endif
+
+#ifdef EMISSIVE_GOLD_ORE
+#endif
+
+#ifdef EMISSIVE_IRON_ORE
+#endif
+
+#ifdef EMISSIVE_FLOWERS
+#endif
+
+#ifdef EMISSIVE_ARMOR_TRIMS
+#endif
+
+#ifdef GENERATED_SPECULAR
+#endif
+
+#ifdef GENERATED_NORMALS
+#endif
+
+#ifdef NORMAL_STRENGTH
+#endif
+
+#ifdef NORMAL_RESOLUTION
+#endif
+
+#ifdef NORMAL_THRESHOLD
+#endif
+
+#ifdef ADVANCED_MATERIALS
+#endif
+
+#ifdef MATERIAL_FORMAT
+#endif
+
+#ifdef REFLECTION
+#endif
+
+#ifdef REFLECTION_MODE
+#endif
+
+#ifdef REFLECTION_LOD
+#endif
+
+#ifdef REFLECTION_SKY_FALLOFF
+#endif
+
+
+#ifdef REFLECTION_SPECULAR
+#endif
+
+#ifdef REFLECTION_ROUGH
+#endif
+
+#ifdef REFLECTION_RAIN
+#endif
+
+#ifdef REFLECTION_RAIN_AMOUNT
+#endif
+
 #ifdef SPECULAR_HIGHLIGHTS
+#endif
+
+#ifdef SPECULAR_HIGHLIGHT
+#endif
+
+#ifdef SPECULAR_HIGHLIGHT_ROUGH
+#endif
+
+#ifdef ALBEDO_METAL
+#endif
+
+#ifdef PARALLAX
+#endif
+
+#ifdef PARALLAX_DEPTH
+#endif
+
+#ifdef PARALLAX_QUALITY
+#endif
+
+#ifdef PARALLAX_DISTANCE
+#endif
+
+
+#ifdef SELF_SHADOW
+#endif
+
+#ifdef SELF_SHADOW_ANGLE
+#endif
+
+#ifdef SELF_SHADOW_QUALITY
+#endif
+
+#ifdef SELF_SHADOW_STRENGTH
+#endif
+
+
+
+#ifdef NORMAL_DAMPENING
+#endif
+
+#ifdef NORMAL_PLANTS
 #endif
 
 #ifdef CHROMATIC_ABERRATION
 #endif
 
 #ifdef GENERATED_SPECULAR_ON_ALL_BLOCKS
+#endif
+
+
+// Shader option visibility anchors for Iris/OptiFine menu parsing.
+#ifdef AMBIENT_DB
+#endif
+
+#ifdef AMBIENT_DG
+#endif
+
+#ifdef AMBIENT_DI
+#endif
+
+#ifdef AMBIENT_DR
+#endif
+
+#ifdef AMBIENT_EB
+#endif
+
+#ifdef AMBIENT_EG
+#endif
+
+#ifdef AMBIENT_EI
+#endif
+
+#ifdef AMBIENT_END_B
+#endif
+
+#ifdef AMBIENT_END_G
+#endif
+
+#ifdef AMBIENT_END_I
+#endif
+
+#ifdef AMBIENT_END_R
+#endif
+
+#ifdef AMBIENT_ER
+#endif
+
+#ifdef AMBIENT_MB
+#endif
+
+#ifdef AMBIENT_MG
+#endif
+
+#ifdef AMBIENT_MI
+#endif
+
+#ifdef AMBIENT_MR
+#endif
+
+#ifdef AMBIENT_NB
+#endif
+
+#ifdef AMBIENT_NG
+#endif
+
+#ifdef AMBIENT_NI
+#endif
+
+#ifdef AMBIENT_NR
+#endif
+
+#ifdef AMBIENT_SRB
+#endif
+
+#ifdef AMBIENT_SRG
+#endif
+
+#ifdef AMBIENT_SRI
+#endif
+
+#ifdef AMBIENT_SRR
+#endif
+
+#ifdef AMBIENT_SSB
+#endif
+
+#ifdef AMBIENT_SSG
+#endif
+
+#ifdef AMBIENT_SSI
+#endif
+
+#ifdef AMBIENT_SSR
+#endif
+
+#ifdef AM_B
+#endif
+
+#ifdef AM_G
+#endif
+
+#ifdef AM_I
+#endif
+
+#ifdef AM_R
+#endif
+
+#ifdef ANAMORPHICLENS
+#endif
+
+#ifdef AO_STRENGTH
+#endif
+
+#ifdef AURORA_ALTITUDE
+#endif
+
+#ifdef AURORA_ALWAYS_VISIBLE
+#endif
+
+#ifdef AURORA_BRIGHTNESS
+#endif
+
+#ifdef AURORA_LIGHTING_INFLUENCE
+#endif
+
+#ifdef BASELENS1
+#endif
+
+#ifdef BASELENS2
+#endif
+
+#ifdef BASELENS3
+#endif
+
+#ifdef BASELENS4
+#endif
+
+#ifdef BASELENS5
+#endif
+
+#ifdef BASELENS6
+#endif
+
+#ifdef BC_B
+#endif
+
+#ifdef BC_G
+#endif
+
+#ifdef BC_I
+#endif
+
+#ifdef BC_R
+#endif
+
+#ifdef BLOCKLIGHT_B
+#endif
+
+#ifdef BLOCKLIGHT_G
+#endif
+
+#ifdef BLOCKLIGHT_I
+#endif
+
+#ifdef BLOCKLIGHT_R
+#endif
+
+#ifdef BLOOM
+#endif
+
+#ifdef BLOOM_CONTRAST
+#endif
+
+#ifdef BLOOM_STRENGTH_END
+#endif
+
+#ifdef BLOOM_STRENGTH_NETHER
+#endif
+
+#ifdef BLOOM_STRENGTH_OVERWORLD
+#endif
+
+#ifdef BLOOM_TILE_SIZE
+#endif
+
+#ifdef BS_B
+#endif
+
+#ifdef BS_G
+#endif
+
+#ifdef BS_I
+#endif
+
+#ifdef BS_R
+#endif
+
+#ifdef CB_B
+#endif
+
+#ifdef CB_G
+#endif
+
+#ifdef CB_I
+#endif
+
+#ifdef CB_R
+#endif
+
+#ifdef CHROMATIC_ABERRATION_STRENGTH
+#endif
+
+#ifdef CTL_B
+#endif
+
+#ifdef CTL_G
+#endif
+
+#ifdef CTL_I
+#endif
+
+#ifdef CTL_R
+#endif
+
+#ifdef DISTANT_BLUR
+#endif
+
+#ifdef DISTANT_BLUR_RANGE
+#endif
+
+#ifdef DISTANT_BLUR_STRENGTH
+#endif
+
+#ifdef DISTANT_FADE
+#endif
+
+#ifdef DISTANT_FADE_STYLE
+#endif
+
+#ifdef DOF
+#endif
+
+#ifdef DOF_FOCUS
+#endif
+
+#ifdef DOF_STRENGTH
+#endif
+
+#ifdef DYNAMIC_HANDLIGHT
+#endif
+
+#ifdef DYNAMIC_HANDLIGHT_STRENGTH
+#endif
+
+#ifdef END_BLACK_HOLE
+#endif
+
+#ifdef END_BLACK_HOLE_SIZE
+#endif
+
+#ifdef END_DISK
+#endif
+
+#ifdef END_DISK_HEIGHT
+#endif
+
+#ifdef END_DISK_OPACITY
+#endif
+
+#ifdef END_DISK_THICKNESS
+#endif
+
+#ifdef END_FLASH_BRIGHTNESS
+#endif
+
+#ifdef END_NEBULA
+#endif
+
+#ifdef END_NEBULA_BRIGHTNESS
+#endif
+
+#ifdef END_STARS
+#endif
+
+#ifdef EP_B
+#endif
+
+#ifdef EP_G
+#endif
+
+#ifdef EP_I
+#endif
+
+#ifdef EP_R
+#endif
+
+#ifdef ER_B
+#endif
+
+#ifdef ER_G
+#endif
+
+#ifdef ER_I
+#endif
+
+#ifdef ER_R
+#endif
+
+#ifdef ET_B
+#endif
+
+#ifdef ET_G
+#endif
+
+#ifdef ET_I
+#endif
+
+#ifdef ET_R
+#endif
+
+#ifdef FLASH_END_B
+#endif
+
+#ifdef FLASH_END_G
+#endif
+
+#ifdef FLASH_END_I
+#endif
+
+#ifdef FLASH_END_R
+#endif
+
+#ifdef FLOODFILL_BRIGHTNESS
+#endif
+
+#ifdef FLOODFILL_RADIUS
+#endif
+
+#ifdef FOG_DENSITY
+#endif
+
+#ifdef FOG_HEIGHT
+#endif
+
+#ifdef FXAA
+#endif
+
+#ifdef GENERATED_NIGHT_NEBULA
+#endif
+
+#ifdef GENERATED_NIGHT_NEBULA_BRIGHTNESS
+#endif
+
+#ifdef GLSP_B
+#endif
+
+#ifdef GLSP_G
+#endif
+
+#ifdef GLSP_I
+#endif
+
+#ifdef GLSP_R
+#endif
+
+#ifdef GS_B
+#endif
+
+#ifdef GS_G
+#endif
+
+#ifdef GS_I
+#endif
+
+#ifdef GS_R
+#endif
+
+#ifdef JL_B
+#endif
+
+#ifdef JL_G
+#endif
+
+#ifdef JL_I
+#endif
+
+#ifdef JL_R
+#endif
+
+#ifdef KARMAN_LINE
+#endif
+
+#ifdef LAVA_B
+#endif
+
+#ifdef LAVA_G
+#endif
+
+#ifdef LAVA_I
+#endif
+
+#ifdef LAVA_R
+#endif
+
+#ifdef LENS_FLARE
+#endif
+
+#ifdef LIGHT_B
+#endif
+
+#ifdef LIGHT_DB
+#endif
+
+#ifdef LIGHT_DG
+#endif
+
+#ifdef LIGHT_DI
+#endif
+
+#ifdef LIGHT_DR
+#endif
+
+#ifdef LIGHT_EB
+#endif
+
+#ifdef LIGHT_EG
+#endif
+
+#ifdef LIGHT_EI
+#endif
+
+#ifdef LIGHT_END_B
+#endif
+
+#ifdef LIGHT_END_G
+#endif
+
+#ifdef LIGHT_END_I
+#endif
+
+#ifdef LIGHT_END_R
+#endif
+
+#ifdef LIGHT_ER
+#endif
+
+#ifdef LIGHT_G
+#endif
+
+#ifdef LIGHT_I
+#endif
+
+#ifdef LIGHT_MB
+#endif
+
+#ifdef LIGHT_MG
+#endif
+
+#ifdef LIGHT_MI
+#endif
+
+#ifdef LIGHT_MR
+#endif
+
+#ifdef LIGHT_NB
+#endif
+
+#ifdef LIGHT_NG
+#endif
+
+#ifdef LIGHT_NI
+#endif
+
+#ifdef LIGHT_NR
+#endif
+
+#ifdef LIGHT_R
+#endif
+
+#ifdef LIGHT_SRB
+#endif
+
+#ifdef LIGHT_SRG
+#endif
+
+#ifdef LIGHT_SRI
+#endif
+
+#ifdef LIGHT_SRR
+#endif
+
+#ifdef LIGHT_SSB
+#endif
+
+#ifdef LIGHT_SSG
+#endif
+
+#ifdef LIGHT_SSI
+#endif
+
+#ifdef LIGHT_SSR
+#endif
+
+#ifdef LPV_CLOUDY_FOG
+#endif
+
+#ifdef LPV_FOG
+#endif
+
+#ifdef LPV_FOG_STRENGTH
+#endif
+
+#ifdef MANUAL_FOCUS
+#endif
+
+#ifdef MB_B
+#endif
+
+#ifdef MB_G
+#endif
+
+#ifdef MB_I
+#endif
+
+#ifdef MB_R
+#endif
+
+#ifdef MILKY_WAY
+#endif
+
+#ifdef MILKY_WAY_BRIGHTNESS
+#endif
+
+#ifdef MINLIGHT_B
+#endif
+
+#ifdef MINLIGHT_G
+#endif
+
+#ifdef MINLIGHT_I
+#endif
+
+#ifdef MINLIGHT_R
+#endif
+
+#ifdef MOTION_BLUR
+#endif
+
+#ifdef MOTION_BLUR_STRENGTH
+#endif
+
+#ifdef NEBULA_END_FIRST_B
+#endif
+
+#ifdef NEBULA_END_FIRST_G
+#endif
+
+#ifdef NEBULA_END_FIRST_I
+#endif
+
+#ifdef NEBULA_END_FIRST_R
+#endif
+
+#ifdef NEBULA_END_SECOND_B
+#endif
+
+#ifdef NEBULA_END_SECOND_G
+#endif
+
+#ifdef NEBULA_END_SECOND_I
+#endif
+
+#ifdef NEBULA_END_SECOND_R
+#endif
+
+#ifdef NETHER_SMOKE
+#endif
+
+#ifdef NETHER_SMOKE_FREQUENCY
+#endif
+
+#ifdef NETHER_SMOKE_SPEED
+#endif
+
+#ifdef NETHER_SMOKE_STRENGTH
+#endif
+
+#ifdef NP_B
+#endif
+
+#ifdef NP_G
+#endif
+
+#ifdef NP_I
+#endif
+
+#ifdef NP_R
+#endif
+
+#ifdef OF_B
+#endif
+
+#ifdef OF_G
+#endif
+
+#ifdef OF_I
+#endif
+
+#ifdef OF_R
+#endif
+
+#ifdef OVERLAPLENS1
+#endif
+
+#ifdef OVERLAPLENS2
+#endif
+
+#ifdef OVERLAPLENS3
+#endif
+
+#ifdef OVERLAPLENS4
+#endif
+
+#ifdef OVERLAPLENS5
+#endif
+
+#ifdef PF_B
+#endif
+
+#ifdef PF_G
+#endif
+
+#ifdef PF_I
+#endif
+
+#ifdef PF_R
+#endif
+
+#ifdef PLANAR_CLOUDS
+#endif
+
+#ifdef PLANAR_CLOUDS_AMOUNT
+#endif
+
+#ifdef PLANAR_CLOUDS_BRIGHTNESS
+#endif
+
+#ifdef PLANAR_CLOUDS_HEIGHT
+#endif
+
+#ifdef PLANAR_CLOUDS_OPACITY
+#endif
+
+#ifdef POINT1
+#endif
+
+#ifdef POINT10
+#endif
+
+#ifdef POINT11
+#endif
+
+#ifdef POINT2
+#endif
+
+#ifdef POINT3
+#endif
+
+#ifdef POINT4
+#endif
+
+#ifdef POINT5
+#endif
+
+#ifdef POINT6
+#endif
+
+#ifdef POINT7
+#endif
+
+#ifdef POINT8
+#endif
+
+#ifdef POINT9
+#endif
+
+#ifdef RACO_B
+#endif
+
+#ifdef RACO_G
+#endif
+
+#ifdef RACO_I
+#endif
+
+#ifdef RACO_R
+#endif
+
+#ifdef RAINBOW
+#endif
+
+#ifdef RAINBOW1
+#endif
+
+#ifdef RAINBOW2
+#endif
+
+#ifdef RAINBOW3
+#endif
+
+#ifdef RAINBOW_BRIGHTNESS
+#endif
+
+#ifdef REALTIME_SHADOWS
+#endif
+
+#ifdef REFRACTION
+#endif
+
+#ifdef REFRACTION_STRENGTH
+#endif
+
+#ifdef RING1
+#endif
+
+#ifdef RING10
+#endif
+
+#ifdef RING11
+#endif
+
+#ifdef RING12
+#endif
+
+#ifdef RING13
+#endif
+
+#ifdef RING14
+#endif
+
+#ifdef RING2
+#endif
+
+#ifdef RING3
+#endif
+
+#ifdef RING4
+#endif
+
+#ifdef RING5
+#endif
+
+#ifdef RING6
+#endif
+
+#ifdef RING7
+#endif
+
+#ifdef RING8
+#endif
+
+#ifdef RING9
+#endif
+
+#ifdef ROUND_SUN_MOON
+#endif
+
+#ifdef SATURATION
+#endif
+
+#ifdef SHADOW_COLOR
+#endif
+
+#ifdef SHADOW_PIXEL
+#endif
+
+#ifdef SHIFT
+#endif
+
+#ifdef SHOOTING_STARS
+#endif
+
+#ifdef SHOOTING_STARS_CHANCE
+#endif
+
+#ifdef SHOOTING_STARS_COUNT
+#endif
+
+#ifdef SHOOTING_STARS_LINE_THICKNESS
+#endif
+
+#ifdef SHOOTING_STARS_SIZE
+#endif
+
+#ifdef SHOOTING_STARS_SPEED
+#endif
+
+#ifdef SHOOTING_STARS_TRAIL_LENGTH
+#endif
+
+#ifdef SLRL_B
+#endif
+
+#ifdef SLRL_G
+#endif
+
+#ifdef SLRL_I
+#endif
+
+#ifdef SLRL_R
+#endif
+
+#ifdef SL_B
+#endif
+
+#ifdef SL_G
+#endif
+
+#ifdef SL_I
+#endif
+
+#ifdef SL_R
+#endif
+
+#ifdef SOUL_B
+#endif
+
+#ifdef SOUL_G
+#endif
+
+#ifdef SOUL_I
+#endif
+
+#ifdef SOUL_R
+#endif
+
+#ifdef SSAO
+#endif
+
+#ifdef SS_SHADOWS
+#endif
+
+#ifdef STAR_AMOUNT
+#endif
+
+#ifdef STAR_BRIGHTNESS
+#endif
+
+#ifdef STAR_SIZE
+#endif
+
+#ifdef SUNRISE_SUNSET_INTENSITY
+#endif
+
+#ifdef SUN_ANGLE_END
+#endif
+
+#ifdef SUN_ANGLE_OVERWORLD
+#endif
+
+#ifdef TAA
+#endif
+
+#ifdef TILT
+#endif
+
+#ifdef TLCF_B
+#endif
+
+#ifdef TLCF_G
+#endif
+
+#ifdef TLCF_I
+#endif
+
+#ifdef TLCF_R
+#endif
+
+#ifdef TONEMAP_BRIGHTNESS
+#endif
+
+#ifdef TONEMAP_CONTRAST
+#endif
+
+#ifdef TONEMAP_HIGHLIGHTS
+#endif
+
+#ifdef TONEMAP_SHADOWS
+#endif
+
+#ifdef TONEMAP_WHITE_THRESHOLD
+#endif
+
+#ifdef VANILLA_AO
+#endif
+
+#ifdef VANILLA_CLOUDS
+#endif
+
+#ifdef VANILLA_CLOUD_FOG
+#endif
+
+#ifdef VANILLA_CLOUD_OPACITY
+#endif
+
+#ifdef VC_AMOUNT
+#endif
+
+#ifdef VC_DENSITY
+#endif
+
+#ifdef VC_DETAIL
+#endif
+
+#ifdef VC_DISTANCE
+#endif
+
+#ifdef VC_DYNAMIC_WEATHER
+#endif
+
+#ifdef VC_HEIGHT
+#endif
+
+#ifdef VC_OPACITY
+#endif
+
+#ifdef VC_SCALE
+#endif
+
+#ifdef VC_SHADOWS
+#endif
+
+#ifdef VC_SPEED
+#endif
+
+#ifdef VC_THICKNESS
+#endif
+
+#ifdef VF_B
+#endif
+
+#ifdef VF_G
+#endif
+
+#ifdef VF_I
+#endif
+
+#ifdef VF_R
+#endif
+
+#ifdef VIBRANCE
+#endif
+
+#ifdef VL
+#endif
+
+#ifdef VL_DAY
+#endif
+
+#ifdef VL_MORNING_EVENING
+#endif
+
+#ifdef VL_NIGHT
+#endif
+
+#ifdef VL_SAMPLES
+#endif
+
+#ifdef VL_STRENGTH
+#endif
+
+#ifdef VL_STRENGTH_RATIO
+#endif
+
+#ifdef VOXEL_VOLUME_SIZE
+#endif
+
+#ifdef WATER_A
+#endif
+
+#ifdef WATER_B
+#endif
+
+#ifdef WATER_CAUSTICS
+#endif
+
+#ifdef WATER_CAUSTICS_STRENGTH
+#endif
+
+#ifdef WATER_FOG
+#endif
+
+#ifdef WATER_FOG_EXPONENT
+#endif
+
+#ifdef WATER_G
+#endif
+
+#ifdef WATER_I
+#endif
+
+#ifdef WATER_R
+#endif
+
+#ifdef WAVING_AMPLITUDE
+#endif
+
+#ifdef WAVING_LEAVES
+#endif
+
+#ifdef WAVING_PLANTS
+#endif
+
+#ifdef WAVING_SPEED
 #endif
 
 #ifndef VX_SUPPORT

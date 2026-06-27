@@ -2,66 +2,95 @@ vec3 nvec3(vec4 pos) {
     return pos.xyz / pos.w;
 }
 
-const float errMult = 2.8;
+vec4 nvec4(vec3 pos) {
+    return vec4(pos.xyz, 1.0);
+}
 
-vec3 Raytrace(sampler2D depthtex, vec3 viewPos, vec3 normal, float dither, float fresnel,
-			  int refinementSteps, float stepSize, float refMult, float stepLength, int sampleCount, out float border, out float lRfragPos, out float dist, out vec2 cdist) {
-	vec3 pos = vec3(0.0);
-    vec3 rfragpos = vec3(0.0);
-	vec3 start = viewPos + normal * (length(viewPos) * (0.025 - fresnel * 0.025) + 0.05);
-    vec3 rayIncrement = stepSize * normalize(reflect(viewPos, normal));
-    viewPos += rayIncrement;
-	vec3 rayDir = rayIncrement;
+float cdist(vec2 coord) {
+    return max(abs(coord.x - 0.5), abs(coord.y - 0.5)) * 1.85;
+}
+
+#if WATER_NORMALS == 0
+#if REFLECTION_MODE == 0
+float errMult = 1.0;
+#elif REFLECTION_MODE == 1
+float errMult = 1.8;
+#else
+float errMult = 2.2;
+#endif
+#else
+#if REFLECTION_MODE == 0
+float errMult = 1.0;
+#elif REFLECTION_MODE == 1
+float errMult = 1.3;
+#else
+float errMult = 1.6;
+#endif
+#endif
+
+vec4 Raytrace(sampler2D depthtex, vec3 viewPos, vec3 normal, float dither, out float border,
+              int refinementSteps, float stepSize, float refinementMult, float stepMult) {
+    vec3 pos = vec3(0.0);
+    float dist = 0.0;
+
+    #ifdef TAA
+    dither = fract(dither + frameCounter * 0.61803398875);
+    #endif
+
+    vec3 start = viewPos + normal * 0.075;
+    vec3 rayStep = stepSize * reflect(normalize(viewPos), normalize(normal));
+    vec3 rayOffset = rayStep;
+    viewPos += rayStep;
 
     int refinedSamples = 0;
 
-    for (int i = 0; i < sampleCount; i++) {
-        pos = nvec3(gbufferProjection * vec4(viewPos, 1.0)) * 0.5 + 0.5;
-		if (abs(pos.x - 0.5) > 0.6 || abs(pos.y - 0.5) > 0.55) break;
-    
-        float sampleDepth = texture(depthtex, pos.xy).r;
-		rfragpos = vec3(pos.xy, sampleDepth);
-        rfragpos = nvec3(gbufferProjectionInverse * vec4(rfragpos * 2.0 - 1.0, 1.0));
+    for (int i = 0; i < 30; i++) {
+        pos = nvec3(gbufferProjection * nvec4(viewPos)) * 0.5 + 0.5;
+        if (pos.x < -0.05 || pos.x > 1.05 || pos.y < -0.05 || pos.y > 1.05) break;
 
-		#if defined DISTANT_HORIZONS || defined VOXY
-		if (sampleDepth >= 1.0) {
-		#endif
-			#ifdef DISTANT_HORIZONS
-			float dhDepth = texture(dhDepthTex1, pos.xy).r;
-			if (dhDepth < 1.0) {
-				rfragpos = nvec3(dhProjectionInverse * vec4(vec3(pos.xy, dhDepth) * 2.0 - 1.0, 1.0));
-			}
-			#endif
-			#ifdef VOXY
-			float vxDepth = texture(vxDepthTexOpaque, pos.xy).r;
-			if (vxDepth < 1.0) {
-				rfragpos = nvec3(vxProjInv * vec4(vec3(pos.xy, vxDepth) * 2.0 - 1.0, 1.0));
-			}
-			#endif
-		#if defined DISTANT_HORIZONS || defined VOXY
-		}
-		#endif
+        float sampleDepth = texture2D(depthtex, pos.xy).r;
+        vec3 hitViewPos = nvec3(gbufferProjectionInverse * nvec4(vec3(pos.xy, sampleDepth) * 2.0 - 1.0));
 
-		dist = length(start - rfragpos);
+        #if REFLECTION_LOD == 1
+        #ifdef VOXY
+        if (sampleDepth >= 1.0) {
+            sampleDepth = texture2D(vxDepthTexOpaque, pos.xy).r;
+            hitViewPos = nvec3(vxProjInv * nvec4(vec3(pos.xy, sampleDepth) * 2.0 - 1.0));
+        }
+        #endif
+        #ifdef DISTANT_HORIZONS
+        if (sampleDepth >= 1.0) {
+            sampleDepth = texture2D(dhDepthTex1, pos.xy).r;
+            hitViewPos = nvec3(dhProjectionInverse * nvec4(vec3(pos.xy, sampleDepth) * 2.0 - 1.0));
+        }
+        #endif
+        #endif
 
-        float err = length(viewPos - rfragpos);
+        dist = abs(dot(normalize(start - hitViewPos), normal));
 
-        if (err < length(rayIncrement) * errMult) {
-			refinedSamples++;
-			if (refinedSamples >= refinementSteps) break;
-			rayDir -= rayIncrement;
-			rayIncrement *= refMult;
-		}
-        rayIncrement *= stepLength;
-        rayDir += rayIncrement * (0.1 * dither + 0.9);
-		viewPos = start + rayDir;
+        float error = length(viewPos - hitViewPos);
+        float thickness = length(rayStep) * pow(length(rayOffset), 0.1) * errMult;
+        if (error < thickness) {
+            refinedSamples++;
+            if (refinedSamples >= refinementSteps) break;
+            rayOffset -= rayStep;
+            rayStep *= refinementMult;
+        }
+
+        rayStep *= stepMult;
+        rayOffset += rayStep;
+        viewPos = start + rayOffset;
     }
 
-    if (pos.z < 0.99997) {
-        lRfragPos = length(rfragpos);
-        cdist = abs(pos.xy - 0.5) / vec2(0.6, 0.55);
-        border = clamp(1.0 - pow2(pow32(max(cdist.x, cdist.y))), 0.0, 1.0);
-    }
+    border = cdist(pos.st);
 
-	return pos;
+    return vec4(pos, dist);
+}
+
+vec3 Raytrace(sampler2D depthtex, vec3 viewPos, vec3 normal, float dither,
+              int refinementSteps, float stepSize, float refinementMult, float stepMult,
+              out float border, out vec2 cdistOut) {
+    vec4 pos = Raytrace(depthtex, viewPos, normal, dither, border, refinementSteps, stepSize, refinementMult, stepMult);
+    cdistOut = abs(pos.xy - 0.5) / vec2(0.6, 0.55);
+    return pos.xyz;
 }
