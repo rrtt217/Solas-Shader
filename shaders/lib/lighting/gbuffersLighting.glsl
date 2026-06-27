@@ -171,8 +171,6 @@ void gbuffersLighting(in vec4 color, inout vec4 albedo, in vec3 screenPos, in ve
     shadow = fmix(fakeShadow, realShadow, vec3(shadowVisibility));
     #endif
 
-    float time = (timeAngle + float(worldDay % 100 + 5)) * 1200.0;
-
     //Cloud Shadows
     float cloudShadow = 1.0;
 
@@ -189,6 +187,7 @@ void gbuffersLighting(in vec4 color, inout vec4 albedo, in vec3 screenPos, in ve
     float cloudTop = height + thickness * scale * 1.18;
 
     if (worldPos.y + cameraPosition.y < cloudTop) {
+        float time = (timeAngle + float(worldDay % 100 + 5)) * 1200.0;
         vec2 wind = vec2(time * speed * 0.005, sin(time * speed * 0.1) * 0.01) * speed * 0.05;
 
         vec3 worldLightVec = mat3(gbufferModelViewInverse) * lightVec;
